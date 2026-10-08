@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 1000" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#3d332a"/>
+    </marker>
+    <marker id="arrowOrange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#ea5b1f"/>
+    </marker>
+  </defs>
+
+  <rect width="1280" height="1000" fill="#f7f0dd"/>
+
+  <!-- Title -->
+  <text x="640" y="42" text-anchor="middle" font-size="28" font-weight="700" fill="#2b2622">ShopMate AI — System Architecture</text>
+  <text x="640" y="66" text-anchor="middle" font-size="13" fill="#6b5d4d">Agentic shopping assistant — planner/search/rank/verify pipeline over category-agnostic product data</text>
+
+  <!-- ===================== CLIENT LAYER ===================== -->
+  <rect x="60" y="100" width="1160" height="110" rx="10" fill="#fffaf0" stroke="#2b2622" stroke-width="2"/>
+  <text x="80" y="124" font-size="12" font-weight="700" fill="#ea5b1f">CLIENT LAYER</text>
+
+  <rect x="90" y="136" width="300" height="58" rx="6" fill="#f7f0dd" stroke="#2b2622" stroke-width="1.5"/>
+  <text x="240" y="158" text-anchor="middle" font-size="14" font-weight="700" fill="#2b2622">React + Vite Frontend</text>
+  <text x="240" y="176" text-anchor="middle" font-size="11" fill="#6b5d4d">Chat UI · reasoning trace · cart mandate modal</text>
+
+  <rect x="420" y="136" width="280" height="58" rx="6" fill="#f7f0dd" stroke="#2b2622" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <text x="560" y="158" text-anchor="middle" font-size="13" font-weight="700" fill="#6b5d4d">(Current demo build)</text>
+  <text x="560" y="176" text-anchor="middle" font-size="11" fill="#6b5d4d">Hardcoded scenarios.js — no network calls</text>
+
+  <rect x="730" y="136" width="460" height="58" rx="6" fill="#f7f0dd" stroke="#a9906a" stroke-width="1.5"/>
+  <text x="960" y="158" text-anchor="middle" font-size="12" fill="#6b5d4d">Browser (user's laptop) — talks to backend at</text>
+  <text x="960" y="176" text-anchor="middle" font-size="12" font-family="monospace" fill="#2b2622">http://localhost:8000</text>
+
+  <!-- Arrow client -> backend -->
+  <line x1="640" y1="210" x2="640" y2="250" stroke="#3d332a" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="656" y="235" font-size="11" fill="#6b5d4d">HTTPS / JSON (REST)</text>
+
+  <!-- ===================== BACKEND LAYER ===================== -->
+  <rect x="60" y="250" width="1160" height="130" rx="10" fill="#fffaf0" stroke="#2b2622" stroke-width="2"/>
+  <text x="80" y="274" font-size="12" font-weight="700" fill="#ea5b1f">BACKEND — FastAPI ORCHESTRATOR</text>
+
+  <rect x="90" y="288" width="220" height="76" rx="6" fill="#f7f0dd" stroke="#2b2622" stroke-width="1.5"/>
+  <text x="200" y="310" text-anchor="middle" font-size="13" font-weight="700" fill="#2b2622">API Routes</text>
+  <text x="200" y="328" text-anchor="middle" font-size="10.5" fill="#6b5d4d">/health, /health/db</text>
+  <text x="200" y="344" text-anchor="middle" font-size="10.5" fill="#6b5d4d">/products, /chat (Phase 2+)</text>
+  <text x="200" y="358" text-anchor="middle" font-size="10.5" fill="#6b5d4d">CORS middleware</text>
+
+  <rect x="330" y="288" width="240" height="76" rx="6" fill="#f7f0dd" stroke="#2b2622" stroke-width="1.5"/>
+  <text x="450" y="310" text-anchor="middle" font-size="13" font-weight="700" fill="#2b2622">Product Schema Layer</text>
+  <text x="450" y="328" text-anchor="middle" font-size="10.5" fill="#6b5d4d">Pydantic Product model</text>
+  <text x="450" y="344" text-anchor="middle" font-size="10.5" fill="#6b5d4d">Per-source normalizers</text>
+  <text x="450" y="358" text-anchor="middle" font-size="10.5" fill="#6b5d4d">(fakestore.py, rapidapi.py…)</text>
+
+  <rect x="590" y="288" width="240" height="76" rx="6" fill="#fdeee2" stroke="#ea5b1f" stroke-width="1.5"/>
+  <text x="710" y="310" text-anchor="middle" font-size="13" font-weight="700" fill="#2b2622">LangGraph Agent (Phase 3)</text>
+  <text x="710" y="328" text-anchor="middle" font-size="10.5" fill="#6b5d4d">Planner → Search → Rank</text>
+  <text x="710" y="344" text-anchor="middle" font-size="10.5" fill="#6b5d4d">→ Verifier → Response</text>
+  <text x="710" y="358" text-anchor="middle" font-size="10.5" fill="#6b5d4d">Explicit state per node</text>
+
+  <rect x="850" y="288" width="220" height="76" rx="6" fill="#f7f0dd" stroke="#2b2622" stroke-width="1.5"/>
+  <text x="960" y="310" text-anchor="middle" font-size="13" font-weight="700" fill="#2b2622">Session Memory (Phase 6)</text>
+  <text x="960" y="328" text-anchor="middle" font-size="10.5" fill="#6b5d4d">Budget, preferences,</text>
+  <text x="960" y="344" text-anchor="middle" font-size="10.5" fill="#6b5d4d">rejected items across turns</text>
+  <text x="960" y="358" text-anchor="middle" font-size="10.5" fill="#6b5d4d">SQLAlchemy ORM</text>
+
+  <!-- Arrows backend -> agent internal chain -->
+  <line x1="310" y1="326" x2="330" y2="326" stroke="#3d332a" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="570" y1="326" x2="590" y2="326" stroke="#3d332a" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="830" y1="326" x2="850" y2="326" stroke="#3d332a" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Arrows backend -> LLM and DB and data sources -->
+  <line x1="710" y1="364" x2="710" y2="430" stroke="#ea5b1f" stroke-width="2" marker-end="url(#arrowOrange)"/>
+  <text x="726" y="400" font-size="11" fill="#ea5b1f">tool-calling / intent parsing</text>
+
+  <line x1="960" y1="364" x2="1050" y2="700" stroke="#3d332a" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <line x1="450" y1="364" x2="230" y2="700" stroke="#3d332a" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="260" y="500" font-size="11" fill="#6b5d4d">normalize()</text>
+
+  <!-- ===================== LLM LAYER ===================== -->
+  <rect x="590" y="430" width="240" height="90" rx="10" fill="#2b2622" stroke="#2b2622" stroke-width="2"/>
+  <text x="710" y="456" text-anchor="middle" font-size="13" font-weight="700" fill="#f5b301">Groq LLM</text>
+  <text x="710" y="474" text-anchor="middle" font-size="10.5" fill="#e9ddc4">openai/gpt-oss-120b</text>
+  <text x="710" y="490" text-anchor="middle" font-size="10.5" fill="#e9ddc4">OpenAI-compatible API</text>
+  <text x="710" y="506" text-anchor="middle" font-size="9.5" fill="#c9bfa9">(swappable: Cerebras / Fireworks)</text>
+
+  <!-- Verifier arrow back -->
+  <line x1="830" y1="475" x2="1050" y2="475" stroke="#ea5b1f" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arrowOrange)"/>
+  <text x="855" y="465" font-size="10.5" fill="#ea5b1f">critic / verifier pass (Phase 5)</text>
+
+  <!-- ===================== DATA SOURCES LAYER ===================== -->
+  <rect x="60" y="600" width="600" height="230" rx="10" fill="#fffaf0" stroke="#2b2622" stroke-width="2"/>
+  <text x="80" y="624" font-size="12" font-weight="700" fill="#ea5b1f">PRODUCT DATA SOURCES</text>
+
+  <rect x="90" y="640" width="260" height="70" rx="6" fill="#eaf5ee" stroke="#2f7a4f" stroke-width="1.5"/>
+  <text x="220" y="662" text-anchor="middle" font-size="12.5" font-weight="700" fill="#2f7a4f">FakeStoreAPI (Phase 1)</text>
+  <text x="220" y="680" text-anchor="middle" font-size="10.5" fill="#3d332a">Always-on fallback</text>
+  <text x="220" y="696" text-anchor="middle" font-size="10.5" fill="#3d332a">Zero key, zero quota risk</text>
+
+  <rect x="90" y="722" width="260" height="90" rx="6" fill="#f7f0dd" stroke="#a9906a" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <text x="220" y="744" text-anchor="middle" font-size="12.5" font-weight="700" fill="#6b5d4d">Real Sources (Phase 4)</text>
+  <text x="220" y="762" text-anchor="middle" font-size="10.5" fill="#6b5d4d">RapidAPI Real-Time Product Search</text>
+  <text x="220" y="778" text-anchor="middle" font-size="10.5" fill="#6b5d4d">MYSTORE (Flipkart-sourced)</text>
+  <text x="220" y="794" text-anchor="middle" font-size="10.5" fill="#6b5d4d">SerpAPI (search-grounding fallback)</text>
+
+  <rect x="380" y="640" width="250" height="172" rx="6" fill="#f7f0dd" stroke="#2b2622" stroke-width="1.5"/>
+  <text x="505" y="662" text-anchor="middle" font-size="12.5" font-weight="700" fill="#2b2622">Graceful Degradation</text>
+  <text x="500" y="686" font-size="10" fill="#3d332a">1. Try real source (RapidAPI/MYSTORE)</text>
+  <text x="500" y="704" font-size="10" fill="#3d332a">2. On quota/error → fall back to</text>
+  <text x="500" y="720" font-size="10" fill="#3d332a">   FakeStoreAPI, disclosed to user</text>
+  <text x="500" y="742" font-size="10" fill="#3d332a">3. Never a silent failure —</text>
+  <text x="500" y="758" font-size="10" fill="#3d332a">   explicit "using cached/demo data"</text>
+  <text x="500" y="774" font-size="10" fill="#3d332a">   note surfaces in the trace</text>
+
+  <!-- ===================== DATABASE LAYER ===================== -->
+  <rect x="700" y="600" width="520" height="230" rx="10" fill="#fffaf0" stroke="#2b2622" stroke-width="2"/>
+  <text x="720" y="624" font-size="12" font-weight="700" fill="#ea5b1f">DATABASE</text>
+
+  <rect x="900" y="640" width="290" height="130" rx="8" fill="#e7edf7" stroke="#39538a" stroke-width="1.5"/>
+  <text x="1045" y="666" text-anchor="middle" font-size="13.5" font-weight="700" fill="#39538a">Supabase (Postgres)</text>
+  <text x="1045" y="688" text-anchor="middle" font-size="10.5" fill="#3d332a">Hosted, no local Docker/install</text>
+  <text x="1045" y="706" text-anchor="middle" font-size="10.5" fill="#3d332a">Session memory (Phase 6):</text>
+  <text x="1045" y="722" text-anchor="middle" font-size="10.5" fill="#3d332a">budget, preferences,</text>
+  <text x="1045" y="738" text-anchor="middle" font-size="10.5" fill="#3d332a">rejected items across turns</text>
+  <text x="1045" y="758" text-anchor="middle" font-size="10.5" fill="#3d332a">Connection via SQLAlchemy</text>
+
+  <rect x="730" y="782" width="460" height="34" rx="6" fill="#f7f0dd" stroke="#a9906a" stroke-width="1"/>
+  <text x="960" y="804" text-anchor="middle" font-size="10.5" fill="#6b5d4d">Not connected in current demo build — hardcoded data stands in for both layers</text>
+
+  <!-- ===================== FOOTER: PHASE MAP ===================== -->
+  <rect x="60" y="850" width="1160" height="120" rx="10" fill="#2b2622"/>
+  <text x="80" y="874" font-size="12" font-weight="700" fill="#f5b301">PHASE → COMPONENT MAP</text>
+  <text x="80" y="898" font-size="10.5" fill="#e9ddc4">P0 Scaffolding · P1 Product schema + FakeStoreAPI (this diagram's data layer) · P2 Groq intent parsing · P3 LangGraph agent loop</text>
+  <text x="80" y="918" font-size="10.5" fill="#e9ddc4">P4 Real data sources + degradation · P5 Grounding + verifier · P6 Supabase session memory · P7 Mock Cart Mandate</text>
+  <text x="80" y="938" font-size="10.5" fill="#e9ddc4">P8 Frontend polish + demo rehearsal · P9 (stretch) Multi-agent critic / category-adaptive refinement</text>
+</svg>

@@ -1,0 +1,18 @@
+# --- Backend (Python) ---
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.pytest_cache/
+backend/.env
+
+# --- Private data (Flipkart snapshot, SerpAPI cache) — never commit ---
+backend/data_private/
+
+# --- Frontend (Node) ---
+frontend/node_modules/
+frontend/dist/
+
+# --- OS / Editor ---
+.DS_Store
+.vscode/
+*.log

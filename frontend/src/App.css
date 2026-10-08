@@ -1,0 +1,710 @@
+/* ==========================================================================
+   ShopMate AI — "Warehouse" Theme
+   Palette: kraft paper, corrugated cardboard, safety-orange/yellow hazard
+   accents, stencil-style industrial headers, shelf-tag product cards.
+   ========================================================================== */
+
+:root {
+  --kraft: #d8c6a1;
+  --kraft-dark: #c3ac81;
+  --kraft-darker: #a9906a;
+  --cardboard: #cbb48c;
+  --charcoal: #2b2622;
+  --ink: #3d332a;
+  --ink-soft: #6b5d4d;
+  --paper: #f7f0dd;
+  --paper-white: #fffaf0;
+  --safety-orange: #ea5b1f;
+  --safety-orange-dark: #c94a15;
+  --safety-yellow: #f5b301;
+  --stamp-green: #2f7a4f;
+  --stamp-red: #b0311e;
+  --line-dashed: repeating-linear-gradient(
+    to right,
+    var(--ink-soft) 0,
+    var(--ink-soft) 8px,
+    transparent 8px,
+    transparent 16px
+  );
+}
+
+body {
+  background:
+    linear-gradient(rgba(216, 198, 161, 0.94), rgba(216, 198, 161, 0.94)),
+    repeating-linear-gradient(
+      135deg,
+      var(--kraft) 0px,
+      var(--kraft) 26px,
+      var(--kraft-dark) 26px,
+      var(--kraft-dark) 28px
+    );
+  color: var(--ink);
+}
+
+.app {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 1.5rem 4rem;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Header — warehouse signage board                                       */
+/* ---------------------------------------------------------------------- */
+
+.app__header {
+  position: relative;
+  margin: 0 -1.5rem 2rem;
+  padding: 1.6rem 1.5rem 1.3rem;
+  background: var(--charcoal);
+  border-bottom: 10px solid var(--safety-yellow);
+  border-image: repeating-linear-gradient(
+      -45deg,
+      var(--safety-yellow) 0,
+      var(--safety-yellow) 18px,
+      var(--charcoal) 18px,
+      var(--charcoal) 36px
+    )
+    10;
+  text-align: center;
+}
+
+.app__header-eyebrow {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.25em;
+  color: var(--safety-yellow);
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.app__header h1 {
+  font-family: 'Oswald', sans-serif;
+  font-size: 2.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--paper-white);
+  margin: 0;
+}
+
+.app__header h1 span {
+  color: var(--safety-orange);
+}
+
+.app__tagline {
+  color: #c9bfa9;
+  font-size: 0.85rem;
+  margin-top: 0.4rem;
+  font-family: 'Space Mono', monospace;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Search / query form — "scan it in" console                             */
+/* ---------------------------------------------------------------------- */
+
+.query-form {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  background: var(--paper-white);
+  border: 3px solid var(--charcoal);
+  border-radius: 6px;
+  padding: 0.6rem;
+  box-shadow: 5px 5px 0 var(--charcoal);
+}
+
+.query-form__input {
+  flex: 1;
+  padding: 0.85rem 1rem;
+  border-radius: 4px;
+  border: 2px solid var(--kraft-darker);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 1rem;
+  font-family: 'Inter', sans-serif;
+}
+
+.query-form__input::placeholder {
+  color: var(--ink-soft);
+}
+
+.query-form__input:focus {
+  outline: none;
+  border-color: var(--safety-orange);
+}
+
+.query-form__submit-btn {
+  padding: 0.85rem 1.6rem;
+  border-radius: 4px;
+  border: none;
+  background: var(--safety-orange);
+  color: var(--paper-white);
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 0.95rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.query-form__submit-btn:hover:not(:disabled) {
+  background: var(--safety-orange-dark);
+}
+
+.query-form__submit-btn:disabled {
+  background: #a89b87;
+  cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Example query chips — hanging inventory tags                           */
+/* ---------------------------------------------------------------------- */
+
+.example-queries {
+  margin-bottom: 2rem;
+}
+
+.example-queries__label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--ink-soft);
+  display: block;
+  margin-bottom: 0.7rem;
+}
+
+.example-queries__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.7rem;
+}
+
+.example-queries__chip {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: 4px;
+  border: 2px dashed var(--kraft-darker);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.88rem;
+  text-align: left;
+  font-family: 'Inter', sans-serif;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+}
+
+.example-queries__chip:hover {
+  border-color: var(--safety-orange);
+  border-style: solid;
+  transform: translateY(-1px);
+}
+
+.example-queries__chip-icon {
+  font-size: 1.3rem;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Parsed intent — "work order" ticket                                    */
+/* ---------------------------------------------------------------------- */
+
+.work-order {
+  background: var(--paper-white);
+  border: 2px solid var(--charcoal);
+  border-radius: 6px;
+  padding: 1.1rem 1.4rem;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.work-order::before {
+  content: 'WORK ORDER';
+  position: absolute;
+  top: -11px;
+  left: 16px;
+  background: var(--safety-yellow);
+  color: var(--charcoal);
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.15rem 0.6rem;
+  border: 2px solid var(--charcoal);
+  border-radius: 3px;
+}
+
+.work-order__aisle {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--safety-orange-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.work-order__grid {
+  list-style: none;
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  font-size: 0.88rem;
+}
+
+.work-order__grid strong {
+  display: block;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+  margin-bottom: 0.15rem;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Reasoning trace — conveyor belt / receipt printout                     */
+/* ---------------------------------------------------------------------- */
+
+.pipeline-output > h2,
+.section-label {
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  margin-bottom: 0.9rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 3px solid var(--charcoal);
+  display: inline-block;
+}
+
+.reasoning-trace {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 2rem;
+  background: var(--paper-white);
+  border: 2px solid var(--charcoal);
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.trace-step {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 4px;
+  background: var(--paper);
+  animation: slideIn 0.35s ease;
+  border-left: 5px solid var(--kraft-darker);
+}
+
+.trace-step--thought {
+  border-left-color: #7a6fb0;
+}
+
+.trace-step--action {
+  border-left-color: var(--safety-orange);
+}
+
+.trace-step--observation {
+  border-left-color: var(--stamp-green);
+}
+
+.trace-step__icon {
+  font-size: 1.05rem;
+  line-height: 1.3;
+}
+
+.trace-step__label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+.trace-step__text {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.trace-step__tool-id {
+  font-size: 0.68rem;
+  color: var(--ink-soft);
+  font-family: 'Space Mono', monospace;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Product cards — shelf / price tags                                     */
+/* ---------------------------------------------------------------------- */
+
+.recommendations {
+  margin-bottom: 1rem;
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1.1rem;
+  margin-bottom: 2rem;
+}
+
+.product-card {
+  position: relative;
+  background: var(--paper-white);
+  border: 2px solid var(--charcoal);
+  border-radius: 8px;
+  padding: 1.3rem 1.2rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  box-shadow: 4px 4px 0 rgba(43, 38, 34, 0.25);
+}
+
+/* hole-punch tag notch */
+.product-card::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 16px;
+  height: 16px;
+  background: var(--kraft);
+  border: 2px solid var(--charcoal);
+  border-radius: 50%;
+}
+
+.product-card--top-pick {
+  border-color: var(--safety-orange);
+}
+
+.product-card__badge {
+  position: absolute;
+  top: 10px;
+  right: -10px;
+  background: var(--stamp-red);
+  color: var(--paper-white);
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.7rem;
+  transform: rotate(6deg);
+  border: 2px solid var(--paper-white);
+  border-radius: 3px;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.product-card__icon {
+  font-size: 2.1rem;
+  margin-top: 0.2rem;
+}
+
+.product-card__title {
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.02rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--ink);
+}
+
+.product-card__price {
+  font-family: 'Space Mono', monospace;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--safety-orange-dark);
+  margin: 0;
+}
+
+.product-card__rating {
+  font-size: 0.84rem;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.product-card__reasoning {
+  font-size: 0.82rem;
+  color: var(--ink);
+  line-height: 1.4;
+  margin: 0.3rem 0;
+  padding-top: 0.4rem;
+  border-top: 1px dashed var(--kraft-darker);
+}
+
+.product-card__source {
+  font-size: 0.66rem;
+  color: var(--ink-soft);
+  font-family: 'Space Mono', monospace;
+  margin: 0;
+}
+
+.product-card__select-btn {
+  margin-top: 0.6rem;
+  padding: 0.6rem;
+  border-radius: 4px;
+  border: 2px solid var(--charcoal);
+  background: var(--safety-yellow);
+  color: var(--charcoal);
+  cursor: pointer;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  transition: background 0.15s ease;
+}
+
+.product-card__select-btn:hover {
+  background: var(--safety-orange);
+  color: var(--paper-white);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Comparison table — inventory manifest                                  */
+/* ---------------------------------------------------------------------- */
+
+.comparison-heading {
+  font-family: 'Oswald', sans-serif;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.75rem;
+  color: var(--ink);
+}
+
+.comparison-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 2rem;
+  border: 2px solid var(--charcoal);
+  border-radius: 6px;
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  background: var(--paper-white);
+}
+
+.comparison-table th,
+.comparison-table td {
+  text-align: left;
+  padding: 0.65rem 0.9rem;
+  border-bottom: 1px solid var(--kraft-darker);
+  white-space: nowrap;
+}
+
+.comparison-table th {
+  background: var(--charcoal);
+  color: var(--safety-yellow);
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  font-family: 'Space Mono', monospace;
+}
+
+.comparison-table__top-pick-row {
+  background: #fdeee2;
+}
+
+.comparison-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Reset button                                                            */
+/* ---------------------------------------------------------------------- */
+
+.reset-btn {
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  border: 2px solid var(--charcoal);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: 'Oswald', sans-serif;
+  text-transform: uppercase;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  margin-bottom: 2rem;
+}
+
+.reset-btn:hover {
+  background: var(--charcoal);
+  color: var(--paper-white);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Modal — shipping manifest / packing slip                               */
+/* ---------------------------------------------------------------------- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 17, 14, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 10;
+}
+
+.modal {
+  background: var(--paper-white);
+  border: 3px solid var(--charcoal);
+  border-radius: 8px;
+  padding: 1.8rem;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.35);
+  position: relative;
+}
+
+.modal::before {
+  content: 'SHOPMATE FULFILLMENT — MOCK MANIFEST';
+  position: absolute;
+  top: -13px;
+  left: 20px;
+  background: var(--safety-yellow);
+  color: var(--charcoal);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.2rem 0.6rem;
+  border: 2px solid var(--charcoal);
+  border-radius: 3px;
+}
+
+.modal h2 {
+  margin-top: 0.4rem;
+  font-family: 'Oswald', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink);
+}
+
+.modal__subtitle {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.mandate-json {
+  background: var(--charcoal);
+  border-radius: 6px;
+  padding: 1rem;
+  font-size: 0.76rem;
+  overflow-x: auto;
+  color: #9ee6a8;
+  font-family: 'Space Mono', monospace;
+  margin: 1rem 0;
+}
+
+.modal__consent-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  margin: 1rem 0;
+  cursor: pointer;
+}
+
+.modal__consent-label input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--safety-orange);
+}
+
+.modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.modal__cancel-btn {
+  padding: 0.65rem 1.1rem;
+  border-radius: 4px;
+  border: 2px solid var(--charcoal);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: 'Oswald', sans-serif;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+}
+
+.modal__approve-btn {
+  padding: 0.65rem 1.2rem;
+  border-radius: 4px;
+  border: 2px solid var(--charcoal);
+  background: var(--stamp-green);
+  color: var(--paper-white);
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Oswald', sans-serif;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+}
+
+.modal__approve-btn:disabled {
+  background: #a89b87;
+  border-color: #a89b87;
+  cursor: not-allowed;
+}
+
+/* Confirmation stamp */
+.confirm-stamp {
+  display: inline-block;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--stamp-green);
+  border: 3px solid var(--stamp-green);
+  border-radius: 6px;
+  padding: 0.3rem 0.9rem;
+  transform: rotate(-4deg);
+  margin-bottom: 0.8rem;
+  font-size: 0.9rem;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Responsive                                                              */
+/* ---------------------------------------------------------------------- */
+
+@media (max-width: 600px) {
+  .app__header h1 {
+    font-size: 1.9rem;
+  }
+  .query-form {
+    flex-direction: column;
+  }
+  .work-order__grid {
+    gap: 1rem;
+  }
+}
