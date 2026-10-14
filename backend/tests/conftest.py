@@ -11,7 +11,7 @@ import json
 
 import pytest
 
-from app.services import snapshot_store
+from app.services import mandate_db, snapshot_store
 
 
 @pytest.fixture(autouse=True)
@@ -20,9 +20,15 @@ def _isolated_data_sources(monkeypatch, tmp_path):
     monkeypatch.delenv("DATA_SOURCE", raising=False)
     monkeypatch.delenv("SERPAPI_ENABLED", raising=False)
     monkeypatch.delenv("SERPAPI_KEY", raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)  # tests never touch your real Supabase
+    monkeypatch.delenv("MANDATE_DB_URL", raising=False)
+    monkeypatch.setenv("MANDATE_SECRET", "test-secret")
+    monkeypatch.delenv("MANDATE_TTL_MINUTES", raising=False)
     snapshot_store.reset_cache()
+    mandate_db.reset()
     yield
     snapshot_store.reset_cache()
+    mandate_db.reset()
 
 
 def flipkart_record(product_id="ACC1", title="Test Earbuds", price=999, rating=4.2, rating_count=1000, brand="Acme",

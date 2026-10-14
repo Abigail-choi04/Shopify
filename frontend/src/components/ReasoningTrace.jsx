@@ -1,10 +1,9 @@
 /**
- * ShopMate AI — Reasoning Trace (Phase 8 preview, hardcoded for the demo)
+ * ShopMate AI — Reasoning Trace
  *
- * Renders the ReAct-style Thought -> Action -> Observation steps from
- * the project doc's "Transparent Reasoning" section. `visibleCount`
- * controls how many steps are shown, so App.jsx can reveal them one
- * at a time for the "agent is thinking" effect.
+ * Renders the agent's real Thought -> Action -> Observation steps as
+ * returned by POST /chat. `visibleCount` controls how many steps are
+ * shown, so App.jsx can reveal them one at a time.
  */
 
 const STEP_LABELS = {
@@ -17,7 +16,7 @@ function ReasoningTrace({ steps, visibleCount }) {
   return (
     <div className="reasoning-trace">
       {steps.slice(0, visibleCount).map((step, index) => {
-        const meta = STEP_LABELS[step.type]
+        const meta = STEP_LABELS[step.type] || { label: step.type, icon: '•' }
         return (
           <div key={index} className={`trace-step trace-step--${step.type}`}>
             <span className="trace-step__icon">{meta.icon}</span>

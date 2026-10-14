@@ -1,49 +1,76 @@
 import { useState, useRef } from 'react'
 import './App.css'
-import { pickScenario, EXAMPLE_QUERIES } from './data/scenarios'
+import './extras.css'
+import { sendChat } from './api'
+import { EXAMPLE_QUERIES } from './data/examples'
 import ReasoningTrace from './components/ReasoningTrace'
 import ProductRecommendations from './components/ProductRecommendations'
 import CartMandateModal from './components/CartMandateModal'
 
-// How long each trace step stays hidden before revealing the next one.
-// Purely cosmetic — simulates the agent "thinking" step by step.
-const STEP_REVEAL_DELAY_MS = 650
+// Delay between revealing each trace step once the answer has arrived.
+// The agent's work is already finished by then; this just makes it readable.
+const STEP_REVEAL_DELAY_MS = 220
 
 function App() {
   const [query, setQuery] = useState('')
-  const [stage, setStage] = useState('idle') // idle | thinking | results
-  const [scenario, setScenario] = useState(null)
+  const [stage, setStage] = useState('idle') // idle | loading | thinking | results | error
+  const [result, setResult] = useState(null)
+  const [error, setError] = useState('')
   const [visibleSteps, setVisibleSteps] = useState(0)
   const [selectedProduct, setSelectedProduct] = useState(null)
-  const [orderConfirmed, setOrderConfirmed] = useState(false)
   const timeoutsRef = useRef([])
+  const runIdRef = useRef(0)
 
   const clearPendingTimeouts = () => {
     timeoutsRef.current.forEach(clearTimeout)
     timeoutsRef.current = []
   }
 
-  const runPipeline = (submittedQuery) => {
-    if (!submittedQuery.trim()) return
-
-    clearPendingTimeouts()
-    const matchedScenario = pickScenario(submittedQuery)
-
-    setScenario(matchedScenario)
-    setStage('thinking')
-    setVisibleSteps(0)
-    setSelectedProduct(null)
-    setOrderConfirmed(false)
-
-    matchedScenario.trace.forEach((_, index) => {
+  const revealTrace = (steps, runId) => {
+    if (steps.length === 0) {
+      setStage('results')
+      return
+    }
+    steps.forEach((_, index) => {
       const timeoutId = setTimeout(() => {
+        if (runIdRef.current !== runId) return
         setVisibleSteps(index + 1)
-        if (index === matchedScenario.trace.length - 1) {
-          setTimeout(() => setStage('results'), STEP_REVEAL_DELAY_MS)
+        if (index === steps.length - 1) {
+          const finalId = setTimeout(() => {
+            if (runIdRef.current === runId) setStage('results')
+          }, STEP_REVEAL_DELAY_MS)
+          timeoutsRef.current.push(finalId)
         }
       }, STEP_REVEAL_DELAY_MS * (index + 1))
       timeoutsRef.current.push(timeoutId)
     })
+  }
+
+  const runPipeline = async (submittedQuery) => {
+    const text = submittedQuery.trim()
+    if (!text) return
+
+    clearPendingTimeouts()
+    const runId = runIdRef.current + 1
+    runIdRef.current = runId
+
+    setStage('loading')
+    setError('')
+    setResult(null)
+    setVisibleSteps(0)
+    setSelectedProduct(null)
+
+    try {
+      const data = await sendChat(text)
+      if (runIdRef.current !== runId) return // a newer search replaced this one
+      setResult(data)
+      setStage('thinking')
+      revealTrace(data.trace, runId)
+    } catch (err) {
+      if (runIdRef.current !== runId) return
+      setError(err.message || 'Something went wrong.')
+      setStage('error')
+    }
   }
 
   const handleSubmit = (e) => {
@@ -58,20 +85,23 @@ function App() {
 
   const handleReset = () => {
     clearPendingTimeouts()
+    runIdRef.current += 1
     setStage('idle')
-    setScenario(null)
+    setResult(null)
+    setError('')
     setVisibleSteps(0)
     setSelectedProduct(null)
-    setOrderConfirmed(false)
     setQuery('')
   }
+
+  const busy = stage === 'loading' || stage === 'thinking'
 
   return (
     <div className="app">
       <header className="app__header">
-        <span className="app__header-eyebrow">Automated Fulfillment · Demo Build</span>
+        <span className="app__header-eyebrow">Automated Fulfillment · Order Desk</span>
         <h1>Shop<span>Mate</span> AI</h1>
-        <p className="app__tagline">// agentic shopping assistant — hardcoded demo, no live backend</p>
+        <p className="app__tagline">// your agentic shopping assistant — plan, compare, decide</p>
       </header>
 
       <form className="query-form" onSubmit={handleSubmit}>
@@ -82,8 +112,8 @@ function App() {
           placeholder="Tell me what you want to buy..."
           className="query-form__input"
         />
-        <button type="submit" className="query-form__submit-btn" disabled={stage === 'thinking'}>
-          {stage === 'thinking' ? 'Working...' : 'Find It'}
+        <button type="submit" className="query-form__submit-btn" disabled={busy}>
+          {busy ? 'Working...' : 'Find It'}
         </button>
       </form>
 
@@ -105,34 +135,52 @@ function App() {
         </div>
       )}
 
-      {scenario && stage !== 'idle' && (
+      {stage === 'loading' && (
+        <div className="status-box status-box--loading" role="status">
+          <span className="status-box__spinner" aria-hidden="true" />
+          The agent is searching, checking specs and verifying its claims… this can take 10–20 seconds.
+        </div>
+      )}
+
+      {stage === 'error' && (
+        <div className="status-box status-box--error" role="alert">
+          <strong>Couldn’t complete that search.</strong>
+          <p>{error}</p>
+          <button className="reset-btn" onClick={() => runPipeline(query)}>
+            Try again
+          </button>
+        </div>
+      )}
+
+      {result && (stage === 'thinking' || stage === 'results') && (
         <div className="pipeline-output">
           <div className="work-order">
-            <span className="work-order__aisle">Aisle: {scenario.aisle}</span>
+            <span className="work-order__aisle">Aisle: {result.aisle}</span>
             <ul className="work-order__grid">
               <li>
                 <strong>Category</strong>
-                {scenario.parsedIntent.category}
+                {result.parsedIntent.category}
               </li>
               <li>
                 <strong>Budget</strong>
-                {scenario.parsedIntent.budget}
+                {result.parsedIntent.budget}
               </li>
-              {scenario.parsedIntent.mustHaves.length > 0 && (
+              {result.parsedIntent.mustHaves.length > 0 && (
                 <li>
                   <strong>Must-haves</strong>
-                  {scenario.parsedIntent.mustHaves.join(', ')}
+                  {result.parsedIntent.mustHaves.join(', ')}
                 </li>
               )}
             </ul>
+            {result.dataSource && <span className="work-order__source">Data: {result.dataSource}</span>}
           </div>
 
           <h2 className="section-label">Reasoning trace</h2>
-          <ReasoningTrace steps={scenario.trace} visibleCount={visibleSteps} />
+          <ReasoningTrace steps={result.trace} visibleCount={visibleSteps} />
 
           {stage === 'results' && (
             <>
-              <ProductRecommendations scenario={scenario} onSelectProduct={setSelectedProduct} />
+              <ProductRecommendations result={result} onSelectProduct={setSelectedProduct} />
               <button className="reset-btn" onClick={handleReset}>
                 Start a new search
               </button>
@@ -141,38 +189,8 @@ function App() {
         </div>
       )}
 
-      {selectedProduct && !orderConfirmed && (
-        <CartMandateModal
-          product={selectedProduct}
-          onCancel={() => setSelectedProduct(null)}
-          onApprove={() => {
-            setOrderConfirmed(true)
-          }}
-        />
-      )}
-
-      {orderConfirmed && selectedProduct && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <span className="confirm-stamp">✓ Dispatched</span>
-            <h2>Mock order placed</h2>
-            <p>
-              <strong>{selectedProduct.title}</strong> — ₹{selectedProduct.price.toLocaleString('en-IN')}
-            </p>
-            <p className="modal__subtitle">
-              No real payment was processed. This confirms the mandate flow works end to end.
-            </p>
-            <button
-              className="modal__approve-btn"
-              onClick={() => {
-                setSelectedProduct(null)
-                setOrderConfirmed(false)
-              }}
-            >
-              Done
-            </button>
-          </div>
-        </div>
+      {selectedProduct && (
+        <CartMandateModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
       )}
     </div>
   )
