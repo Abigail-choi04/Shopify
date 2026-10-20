@@ -124,7 +124,8 @@ def _check_spec(claim: Claim, product: Product) -> tuple[str | None, list[float]
         return None, [real]
     if str(claim.value).strip().lower() != str(real).strip().lower():
         return f"spec '{key}' value {claim.value!r} does not match the real value {real!r}", []
-    return None, []
+    # Text facts such as "Windows 11" or "Core i7" legitimately contain digits; the sentence may repeat them.
+    return None, _numbers_in_text(f"{fact.display} {real}")
 
 
 def verify_claim(

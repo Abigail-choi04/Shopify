@@ -1,0 +1,367 @@
+{
+ "snapshot": {
+  "captured_at": "2026-10-08",
+  "products": 480,
+  "per_category": {
+   "earphones": 82,
+   "smartphones": 100,
+   "laptops": 98,
+   "running_shoes": 100,
+   "smartwatches": 100
+  }
+ },
+ "A_coverage": {
+  "earphones": {
+   "products": 82,
+   "distinct_models": 72,
+   "with_rating_pct": 100.0,
+   "with_any_conflict": 14,
+   "specs": {
+    "connectivity": {
+     "label": "Connectivity",
+     "stated_pct": 100.0,
+     "conflict_count": 0
+    },
+    "noise_cancellation": {
+     "label": "Noise cancellation",
+     "stated_pct": 86.6,
+     "conflict_count": 11
+    },
+    "battery_hours": {
+     "label": "Battery life",
+     "stated_pct": 67.1,
+     "conflict_count": 5
+    },
+    "water_resistant": {
+     "label": "Water resistant",
+     "stated_pct": 93.9,
+     "conflict_count": 0
+    }
+   }
+  },
+  "smartphones": {
+   "products": 100,
+   "distinct_models": 49,
+   "with_rating_pct": 100.0,
+   "with_any_conflict": 0,
+   "specs": {
+    "ram_gb": {
+     "label": "RAM",
+     "stated_pct": 97.0,
+     "conflict_count": 0
+    },
+    "storage_gb": {
+     "label": "Storage",
+     "stated_pct": 100.0,
+     "conflict_count": 0
+    },
+    "battery_mah": {
+     "label": "Battery",
+     "stated_pct": 97.0,
+     "conflict_count": 0
+    },
+    "rear_camera_mp": {
+     "label": "Rear camera",
+     "stated_pct": 100.0,
+     "conflict_count": 0
+    },
+    "network_5g": {
+     "label": "5G",
+     "stated_pct": 100.0,
+     "conflict_count": 0
+    },
+    "display_inches": {
+     "label": "Display",
+     "stated_pct": 100.0,
+     "conflict_count": 0
+    }
+   }
+  },
+  "laptops": {
+   "products": 98,
+   "distinct_models": 93,
+   "with_rating_pct": 98.0,
+   "with_any_conflict": 0,
+   "specs": {
+    "processor": {
+     "label": "Processor",
+     "stated_pct": 100.0,
+     "conflict_count": 0
+    },
+    "ram_gb": {
+     "label": "RAM",
+     "stated_pct": 100.0,
+     "conflict_count": 0
+    },
+    "storage_gb": {
+     "label": "Storage",
+     "stated_pct": 100.0,
+     "conflict_count": 0
+    },
+    "screen_inches": {
+     "label": "Screen",
+     "stated_pct": 100.0,
+     "conflict_count": 0
+    },
+    "weight_kg": {
+     "label": "Weight",
+     "stated_pct": 98.0,
+     "conflict_count": 0
+    }
+   }
+  },
+  "running_shoes": {
+   "products": 100,
+   "distinct_models": 75,
+   "with_rating_pct": 99.0,
+   "with_any_conflict": 0,
+   "specs": {
+    "outer_material": {
+     "label": "Outer material",
+     "stated_pct": 100.0,
+     "conflict_count": 0
+    },
+    "sole_material": {
+     "label": "Sole",
+     "stated_pct": 84.0,
+     "conflict_count": 0
+    },
+    "closure": {
+     "label": "Closure",
+     "stated_pct": 96.0,
+     "conflict_count": 0
+    },
+    "ideal_for": {
+     "label": "Ideal for",
+     "stated_pct": 100.0,
+     "conflict_count": 0
+    },
+    "weight_g": {
+     "label": "Weight (per shoe)",
+     "stated_pct": 75.0,
+     "conflict_count": 0
+    }
+   }
+  },
+  "smartwatches": {
+   "products": 100,
+   "distinct_models": 73,
+   "with_rating_pct": 100.0,
+   "with_any_conflict": 2,
+   "specs": {
+    "battery_days": {
+     "label": "Battery life",
+     "stated_pct": 100.0,
+     "conflict_count": 0
+    },
+    "display_inches": {
+     "label": "Display",
+     "stated_pct": 40.0,
+     "conflict_count": 0
+    },
+    "calling": {
+     "label": "Calling",
+     "stated_pct": 98.0,
+     "conflict_count": 2
+    },
+    "gps": {
+     "label": "GPS",
+     "stated_pct": 83.0,
+     "conflict_count": 0
+    },
+    "water_resistant": {
+     "label": "Water resistant",
+     "stated_pct": 100.0,
+     "conflict_count": 0
+    }
+   }
+  }
+ },
+ "B_extraction": {
+  "smartphones": {
+   "title_and_fact_both_present": 97,
+   "agree": 97,
+   "disagree": 0
+  },
+  "laptops": {
+   "title_and_fact_both_present": 98,
+   "agree": 98,
+   "disagree": 0
+  }
+ },
+ "C_queries": {
+  "queries": 66,
+  "in_scope": 61,
+  "answerable": 55,
+  "empty_in_scope": [
+   "phn-09",
+   "phn-10",
+   "lap-01",
+   "lap-07",
+   "lap-12",
+   "shoe-03"
+  ],
+  "empty_reasons": {
+   "every product contradicts a requirement": 5,
+   "nothing in budget": 1
+  },
+  "top_slots": 152,
+  "top_slots_fully_confirmed_pct": 92.8,
+  "requirement_pair_status_pct": {
+   "met": 94.9,
+   "unknown": 3.7,
+   "unsupported": 1.4
+  },
+  "requirement_pairs": 217,
+  "mean_excluded_per_query": 41.7,
+  "by_type": {
+   "easy": {
+    "queries": 18,
+    "answerable": 15,
+    "mean_kept": 31.4
+   },
+   "multi": {
+    "queries": 17,
+    "answerable": 17,
+    "mean_kept": 26.1
+   },
+   "conflict_prone": {
+    "queries": 3,
+    "answerable": 3,
+    "mean_kept": 38.7
+   },
+   "brand": {
+    "queries": 13,
+    "answerable": 12,
+    "mean_kept": 6.9
+   },
+   "tight": {
+    "queries": 3,
+    "answerable": 1,
+    "mean_kept": 6
+   },
+   "unknown_heavy": {
+    "queries": 5,
+    "answerable": 5,
+    "mean_kept": 26.6
+   },
+   "unsupported_brand": {
+    "queries": 1,
+    "answerable": 1,
+    "mean_kept": 100
+   },
+   "out_of_scope": {
+    "queries": 5,
+    "answerable": 0,
+    "mean_kept": 0
+   },
+   "vague": {
+    "queries": 1,
+    "answerable": 1,
+    "mean_kept": 82
+   }
+  },
+  "grouping": {
+   "queries_with_duplicate_models_if_ungrouped": 28,
+   "duplicate_slots_if_ungrouped": 35
+  },
+  "review_weighting": {
+   "queries_with_a_top1": 55,
+   "top1_changed": 3,
+   "top1_under_50_reviews_plain": 4,
+   "top1_under_50_reviews_weighted": 4
+  }
+ },
+ "D_verifier_faults": {
+  "products": 480,
+  "true_claims": 7321,
+  "true_claims_wrongly_rejected": 0,
+  "false_reject_pct": 0.0,
+  "false_reject_examples": [],
+  "faults_injected": 12132,
+  "faults_caught": 12121,
+  "faults_caught_pct": 99.9,
+  "classes": {
+   "invented number in an otherwise true sentence": {
+    "injected": 480,
+    "caught": 480,
+    "caught_pct": 100.0
+   },
+   "price: cites a tool call that does not exist": {
+    "injected": 480,
+    "caught": 480,
+    "caught_pct": 100.0
+   },
+   "price: cites the wrong tool call": {
+    "injected": 480,
+    "caught": 480,
+    "caught_pct": 100.0
+   },
+   "price: wrong number in the sentence": {
+    "injected": 480,
+    "caught": 480,
+    "caught_pct": 100.0
+   },
+   "price: wrong value": {
+    "injected": 480,
+    "caught": 480,
+    "caught_pct": 100.0
+   },
+   "rank: wrong position": {
+    "injected": 480,
+    "caught": 480,
+    "caught_pct": 100.0
+   },
+   "rating: wrong value": {
+    "injected": 477,
+    "caught": 477,
+    "caught_pct": 100.0
+   },
+   "spec number: wrong number in the sentence": {
+    "injected": 1367,
+    "caught": 1356,
+    "caught_pct": 99.2
+   },
+   "spec number: wrong value": {
+    "injected": 1367,
+    "caught": 1367,
+    "caught_pct": 100.0
+   },
+   "spec text: wrong value": {
+    "injected": 1543,
+    "caught": 1543,
+    "caught_pct": 100.0
+   },
+   "spec the listing contradicts itself about": {
+    "injected": 18,
+    "caught": 18,
+    "caught_pct": 100.0
+   },
+   "spec the listing never states": {
+    "injected": 446,
+    "caught": 446,
+    "caught_pct": 100.0
+   },
+   "spec yes/no: flipped value": {
+    "injected": 1537,
+    "caught": 1537,
+    "caught_pct": 100.0
+   },
+   "spec yes/no: right value, opposite wording": {
+    "injected": 1537,
+    "caught": 1537,
+    "caught_pct": 100.0
+   },
+   "unknown field": {
+    "injected": 480,
+    "caught": 480,
+    "caught_pct": 100.0
+   },
+   "within_budget: product is over the budget": {
+    "injected": 480,
+    "caught": 480,
+    "caught_pct": 100.0
+   }
+  }
+ }
+}

@@ -1,0 +1,22 @@
+{
+ "queries_completed": 66,
+ "queries_total": 66,
+ "runs": 99,
+ "planner": {
+  "category_correct_pct": 100.0,
+  "budget_correct_pct": 100.0,
+  "must_have_recall_pct": 82.2,
+  "must_have_precision_pct": 92.4,
+  "intent_exact_pct": 71.7
+ },
+ "runs_with_products": 88,
+ "first_draft_claims": 1350,
+ "first_draft_claims_failed": 0,
+ "first_draft_claim_error_pct": 0.0,
+ "runs_needing_rewrite_pct": 0.0,
+ "final_claims_checked": 1350,
+ "final_claims_dropped": 0,
+ "data_only_fallback_runs": 0,
+ "median_seconds": 20.8,
+ "p90_seconds": 26.0
+}

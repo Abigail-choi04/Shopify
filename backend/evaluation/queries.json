@@ -1,0 +1,808 @@
+{
+ "description": "ShopMate AI evaluation queries. 'gold' is the correct parsed intent a perfect planner would produce; types: easy, multi, brand, tight (expected to be empty or nearly), unknown_heavy (requirement the listings rarely state), conflict_prone (specs listings often contradict), unsupported_brand, out_of_scope, vague.",
+ "queries": [
+  {
+   "id": "ear-01",
+   "query": "Wireless earphones under ₹1500",
+   "type": "easy",
+   "gold": {
+    "category_slug": "headphones",
+    "max_price": 1500,
+    "must_haves": [
+     "wireless"
+    ]
+   }
+  },
+  {
+   "id": "ear-02",
+   "query": "True wireless earbuds under ₹2000 with a good mic",
+   "type": "multi",
+   "gold": {
+    "category_slug": "headphones",
+    "max_price": 2000,
+    "must_haves": [
+     "true wireless",
+     "microphone"
+    ]
+   }
+  },
+  {
+   "id": "ear-03",
+   "query": "ANC earphones under ₹3000",
+   "type": "conflict_prone",
+   "gold": {
+    "category_slug": "headphones",
+    "max_price": 3000,
+    "must_haves": [
+     "active noise cancellation"
+    ]
+   }
+  },
+  {
+   "id": "ear-04",
+   "query": "Bluetooth earphones with 40 hours battery under ₹2500",
+   "type": "conflict_prone",
+   "gold": {
+    "category_slug": "headphones",
+    "max_price": 2500,
+    "must_haves": [
+     "wireless",
+     "40 hours battery"
+    ]
+   }
+  },
+  {
+   "id": "ear-05",
+   "query": "boAt earphones with fast charging",
+   "type": "brand",
+   "gold": {
+    "category_slug": "headphones",
+    "max_price": null,
+    "must_haves": [
+     "boAt",
+     "fast charging"
+    ]
+   }
+  },
+  {
+   "id": "ear-06",
+   "query": "Sweat proof earphones for the gym under ₹1500",
+   "type": "easy",
+   "gold": {
+    "category_slug": "headphones",
+    "max_price": 1500,
+    "must_haves": [
+     "sweat proof"
+    ]
+   }
+  },
+  {
+   "id": "ear-07",
+   "query": "Earphones with Bluetooth 5.3 under ₹2000",
+   "type": "easy",
+   "gold": {
+    "category_slug": "headphones",
+    "max_price": 2000,
+    "must_haves": [
+     "bluetooth 5.3"
+    ]
+   }
+  },
+  {
+   "id": "ear-08",
+   "query": "Waterproof true wireless earbuds under ₹2500",
+   "type": "multi",
+   "gold": {
+    "category_slug": "headphones",
+    "max_price": 2500,
+    "must_haves": [
+     "true wireless",
+     "water resistant"
+    ]
+   }
+  },
+  {
+   "id": "ear-09",
+   "query": "Noise cancelling earbuds under ₹800",
+   "type": "tight",
+   "gold": {
+    "category_slug": "headphones",
+    "max_price": 800,
+    "must_haves": [
+     "noise cancelling"
+    ]
+   }
+  },
+  {
+   "id": "ear-10",
+   "query": "Best realme earbuds under ₹3000",
+   "type": "brand",
+   "gold": {
+    "category_slug": "headphones",
+    "max_price": 3000,
+    "must_haves": [
+     "realme"
+    ]
+   }
+  },
+  {
+   "id": "ear-11",
+   "query": "Earphones with ANC and 50 hours playback under ₹4000",
+   "type": "conflict_prone",
+   "gold": {
+    "category_slug": "headphones",
+    "max_price": 4000,
+    "must_haves": [
+     "active noise cancellation",
+     "50 hours battery"
+    ]
+   }
+  },
+  {
+   "id": "ear-12",
+   "query": "Wired earphones with mic under ₹1000",
+   "type": "multi",
+   "gold": {
+    "category_slug": "headphones",
+    "max_price": 1000,
+    "must_haves": [
+     "wired",
+     "microphone"
+    ]
+   }
+  },
+  {
+   "id": "phn-01",
+   "query": "Phone under ₹15,000 with 5G",
+   "type": "easy",
+   "gold": {
+    "category_slug": "smartphone",
+    "max_price": 15000,
+    "must_haves": [
+     "5G"
+    ]
+   }
+  },
+  {
+   "id": "phn-02",
+   "query": "Phone under ₹25,000 with 8GB RAM and 5G",
+   "type": "multi",
+   "gold": {
+    "category_slug": "smartphone",
+    "max_price": 25000,
+    "must_haves": [
+     "8GB RAM",
+     "5G"
+    ]
+   }
+  },
+  {
+   "id": "phn-03",
+   "query": "Samsung phone with NFC under ₹30,000",
+   "type": "brand",
+   "gold": {
+    "category_slug": "smartphone",
+    "max_price": 30000,
+    "must_haves": [
+     "Samsung",
+     "NFC"
+    ]
+   }
+  },
+  {
+   "id": "phn-04",
+   "query": "AMOLED phone under ₹20,000",
+   "type": "easy",
+   "gold": {
+    "category_slug": "smartphone",
+    "max_price": 20000,
+    "must_haves": [
+     "AMOLED"
+    ]
+   }
+  },
+  {
+   "id": "phn-05",
+   "query": "Phone with 6000mAh battery under ₹20,000",
+   "type": "easy",
+   "gold": {
+    "category_slug": "smartphone",
+    "max_price": 20000,
+    "must_haves": [
+     "6000mAh"
+    ]
+   }
+  },
+  {
+   "id": "phn-06",
+   "query": "Phone with 120Hz display under ₹18,000",
+   "type": "unknown_heavy",
+   "gold": {
+    "category_slug": "smartphone",
+    "max_price": 18000,
+    "must_haves": [
+     "120Hz"
+    ]
+   }
+  },
+  {
+   "id": "phn-07",
+   "query": "Phone with 12GB RAM and 256GB storage under ₹35,000",
+   "type": "multi",
+   "gold": {
+    "category_slug": "smartphone",
+    "max_price": 35000,
+    "must_haves": [
+     "12GB RAM",
+     "256GB storage"
+    ]
+   }
+  },
+  {
+   "id": "phn-08",
+   "query": "50MP camera phone under ₹12,000",
+   "type": "easy",
+   "gold": {
+    "category_slug": "smartphone",
+    "max_price": 12000,
+    "must_haves": [
+     "50MP camera"
+    ]
+   }
+  },
+  {
+   "id": "phn-09",
+   "query": "Apple iPhone under ₹60,000",
+   "type": "brand",
+   "gold": {
+    "category_slug": "smartphone",
+    "max_price": 60000,
+    "must_haves": [
+     "Apple"
+    ]
+   }
+  },
+  {
+   "id": "phn-10",
+   "query": "Phone under ₹8,000 with 8GB RAM",
+   "type": "tight",
+   "gold": {
+    "category_slug": "smartphone",
+    "max_price": 8000,
+    "must_haves": [
+     "8GB RAM"
+    ]
+   }
+  },
+  {
+   "id": "phn-11",
+   "query": "Android phone with fast charging and 5G under ₹22,000",
+   "type": "multi",
+   "gold": {
+    "category_slug": "smartphone",
+    "max_price": 22000,
+    "must_haves": [
+     "Android",
+     "fast charging",
+     "5G"
+    ]
+   }
+  },
+  {
+   "id": "phn-12",
+   "query": "Best Google Pixel phone",
+   "type": "brand",
+   "gold": {
+    "category_slug": "smartphone",
+    "max_price": null,
+    "must_haves": [
+     "Google"
+    ]
+   }
+  },
+  {
+   "id": "lap-01",
+   "query": "Laptop under ₹40,000 with 16GB RAM",
+   "type": "easy",
+   "gold": {
+    "category_slug": "laptop",
+    "max_price": 40000,
+    "must_haves": [
+     "16GB RAM"
+    ]
+   }
+  },
+  {
+   "id": "lap-02",
+   "query": "Windows laptop under ₹60,000 with 16GB RAM and SSD",
+   "type": "multi",
+   "gold": {
+    "category_slug": "laptop",
+    "max_price": 60000,
+    "must_haves": [
+     "Windows",
+     "16GB RAM",
+     "SSD"
+    ]
+   }
+  },
+  {
+   "id": "lap-03",
+   "query": "Lightweight laptop under ₹70,000",
+   "type": "easy",
+   "gold": {
+    "category_slug": "laptop",
+    "max_price": 70000,
+    "must_haves": [
+     "lightweight"
+    ]
+   }
+  },
+  {
+   "id": "lap-04",
+   "query": "Gaming laptop with dedicated graphics under ₹90,000",
+   "type": "multi",
+   "gold": {
+    "category_slug": "laptop",
+    "max_price": 90000,
+    "must_haves": [
+     "gaming",
+     "dedicated graphics"
+    ]
+   }
+  },
+  {
+   "id": "lap-05",
+   "query": "ASUS laptop with 512GB storage under ₹55,000",
+   "type": "brand",
+   "gold": {
+    "category_slug": "laptop",
+    "max_price": 55000,
+    "must_haves": [
+     "ASUS",
+     "512GB storage"
+    ]
+   }
+  },
+  {
+   "id": "lap-06",
+   "query": "HP laptop with Intel i5 under ₹60,000",
+   "type": "unknown_heavy",
+   "gold": {
+    "category_slug": "laptop",
+    "max_price": 60000,
+    "must_haves": [
+     "HP",
+     "i5"
+    ]
+   }
+  },
+  {
+   "id": "lap-07",
+   "query": "Laptop with touchscreen under ₹60,000",
+   "type": "easy",
+   "gold": {
+    "category_slug": "laptop",
+    "max_price": 60000,
+    "must_haves": [
+     "touchscreen"
+    ]
+   }
+  },
+  {
+   "id": "lap-08",
+   "query": "Laptop with backlit keyboard under ₹50,000",
+   "type": "easy",
+   "gold": {
+    "category_slug": "laptop",
+    "max_price": 50000,
+    "must_haves": [
+     "backlit keyboard"
+    ]
+   }
+  },
+  {
+   "id": "lap-09",
+   "query": "15.6 inch laptop under ₹45,000 with 8GB RAM",
+   "type": "multi",
+   "gold": {
+    "category_slug": "laptop",
+    "max_price": 45000,
+    "must_haves": [
+     "15.6 inch",
+     "8GB RAM"
+    ]
+   }
+  },
+  {
+   "id": "lap-10",
+   "query": "Laptop with 10 hours battery life",
+   "type": "unknown_heavy",
+   "gold": {
+    "category_slug": "laptop",
+    "max_price": null,
+    "must_haves": [
+     "10 hours battery"
+    ]
+   }
+  },
+  {
+   "id": "lap-11",
+   "query": "Apple MacBook",
+   "type": "brand",
+   "gold": {
+    "category_slug": "laptop",
+    "max_price": null,
+    "must_haves": [
+     "Apple"
+    ]
+   }
+  },
+  {
+   "id": "lap-12",
+   "query": "Laptop under ₹20,000 with 16GB RAM",
+   "type": "tight",
+   "gold": {
+    "category_slug": "laptop",
+    "max_price": 20000,
+    "must_haves": [
+     "16GB RAM"
+    ]
+   }
+  },
+  {
+   "id": "shoe-01",
+   "query": "Running shoes under ₹2000",
+   "type": "easy",
+   "gold": {
+    "category_slug": "running_shoes",
+    "max_price": 2000,
+    "must_haves": []
+   }
+  },
+  {
+   "id": "shoe-02",
+   "query": "Mesh running shoes for men under ₹2000",
+   "type": "multi",
+   "gold": {
+    "category_slug": "running_shoes",
+    "max_price": 2000,
+    "must_haves": [
+     "mesh",
+     "men"
+    ]
+   }
+  },
+  {
+   "id": "shoe-03",
+   "query": "Women's running shoes under ₹3000",
+   "type": "easy",
+   "gold": {
+    "category_slug": "running_shoes",
+    "max_price": 3000,
+    "must_haves": [
+     "women"
+    ]
+   }
+  },
+  {
+   "id": "shoe-04",
+   "query": "Adidas running shoes under ₹5000",
+   "type": "brand",
+   "gold": {
+    "category_slug": "running_shoes",
+    "max_price": 5000,
+    "must_haves": [
+     "Adidas"
+    ]
+   }
+  },
+  {
+   "id": "shoe-05",
+   "query": "Lightweight running shoes under 300 g",
+   "type": "unknown_heavy",
+   "gold": {
+    "category_slug": "running_shoes",
+    "max_price": null,
+    "must_haves": [
+     "under 300 g"
+    ]
+   }
+  },
+  {
+   "id": "shoe-06",
+   "query": "Lace-up running shoes with rubber sole under ₹3000",
+   "type": "multi",
+   "gold": {
+    "category_slug": "running_shoes",
+    "max_price": 3000,
+    "must_haves": [
+     "lace-up",
+     "rubber sole"
+    ]
+   }
+  },
+  {
+   "id": "shoe-07",
+   "query": "Puma running shoes for men",
+   "type": "brand",
+   "gold": {
+    "category_slug": "running_shoes",
+    "max_price": null,
+    "must_haves": [
+     "Puma",
+     "men"
+    ]
+   }
+  },
+  {
+   "id": "shoe-08",
+   "query": "EVA sole running shoes under ₹2500",
+   "type": "easy",
+   "gold": {
+    "category_slug": "running_shoes",
+    "max_price": 2500,
+    "must_haves": [
+     "EVA sole"
+    ]
+   }
+  },
+  {
+   "id": "shoe-09",
+   "query": "Asics shoes under ₹6000 for women",
+   "type": "brand",
+   "gold": {
+    "category_slug": "running_shoes",
+    "max_price": 6000,
+    "must_haves": [
+     "Asics",
+     "women"
+    ]
+   }
+  },
+  {
+   "id": "shoe-10",
+   "query": "Campus running shoes under ₹1500 with mesh",
+   "type": "multi",
+   "gold": {
+    "category_slug": "running_shoes",
+    "max_price": 1500,
+    "must_haves": [
+     "Campus",
+     "mesh"
+    ]
+   }
+  },
+  {
+   "id": "shoe-11",
+   "query": "Leather running shoes under ₹4000",
+   "type": "easy",
+   "gold": {
+    "category_slug": "running_shoes",
+    "max_price": 4000,
+    "must_haves": [
+     "leather"
+    ]
+   }
+  },
+  {
+   "id": "shoe-12",
+   "query": "Nike running shoes",
+   "type": "unsupported_brand",
+   "gold": {
+    "category_slug": "running_shoes",
+    "max_price": null,
+    "must_haves": [
+     "Nike"
+    ]
+   }
+  },
+  {
+   "id": "watch-01",
+   "query": "Smartwatch under ₹2000",
+   "type": "easy",
+   "gold": {
+    "category_slug": "smartwatch",
+    "max_price": 2000,
+    "must_haves": []
+   }
+  },
+  {
+   "id": "watch-02",
+   "query": "Smartwatch under ₹3000 with calling and GPS",
+   "type": "multi",
+   "gold": {
+    "category_slug": "smartwatch",
+    "max_price": 3000,
+    "must_haves": [
+     "calling",
+     "GPS"
+    ]
+   }
+  },
+  {
+   "id": "watch-03",
+   "query": "AMOLED smartwatch under ₹5000",
+   "type": "easy",
+   "gold": {
+    "category_slug": "smartwatch",
+    "max_price": 5000,
+    "must_haves": [
+     "AMOLED"
+    ]
+   }
+  },
+  {
+   "id": "watch-04",
+   "query": "Smartwatch with heart rate and SpO2 under ₹3000",
+   "type": "multi",
+   "gold": {
+    "category_slug": "smartwatch",
+    "max_price": 3000,
+    "must_haves": [
+     "heart rate",
+     "SpO2"
+    ]
+   }
+  },
+  {
+   "id": "watch-05",
+   "query": "Smartwatch with 7 days battery under ₹4000",
+   "type": "easy",
+   "gold": {
+    "category_slug": "smartwatch",
+    "max_price": 4000,
+    "must_haves": [
+     "7 days battery"
+    ]
+   }
+  },
+  {
+   "id": "watch-06",
+   "query": "Fire-Boltt smartwatch under ₹2500",
+   "type": "brand",
+   "gold": {
+    "category_slug": "smartwatch",
+    "max_price": 2500,
+    "must_haves": [
+     "Fire-Boltt"
+    ]
+   }
+  },
+  {
+   "id": "watch-07",
+   "query": "Samsung Galaxy Watch",
+   "type": "brand",
+   "gold": {
+    "category_slug": "smartwatch",
+    "max_price": null,
+    "must_haves": [
+     "Samsung"
+    ]
+   }
+  },
+  {
+   "id": "watch-08",
+   "query": "Water resistant smartwatch with GPS under ₹8000",
+   "type": "multi",
+   "gold": {
+    "category_slug": "smartwatch",
+    "max_price": 8000,
+    "must_haves": [
+     "water resistant",
+     "GPS"
+    ]
+   }
+  },
+  {
+   "id": "watch-09",
+   "query": "Smartwatch with SIM support",
+   "type": "unknown_heavy",
+   "gold": {
+    "category_slug": "smartwatch",
+    "max_price": null,
+    "must_haves": [
+     "SIM"
+    ]
+   }
+  },
+  {
+   "id": "watch-10",
+   "query": "Round dial smartwatch with silicone strap under ₹3000",
+   "type": "multi",
+   "gold": {
+    "category_slug": "smartwatch",
+    "max_price": 3000,
+    "must_haves": [
+     "round",
+     "silicone strap"
+    ]
+   }
+  },
+  {
+   "id": "watch-11",
+   "query": "Android compatible smartwatch with calling under ₹2500",
+   "type": "multi",
+   "gold": {
+    "category_slug": "smartwatch",
+    "max_price": 2500,
+    "must_haves": [
+     "Android",
+     "calling"
+    ]
+   }
+  },
+  {
+   "id": "watch-12",
+   "query": "Apple Watch under ₹30,000",
+   "type": "brand",
+   "gold": {
+    "category_slug": "smartwatch",
+    "max_price": 30000,
+    "must_haves": [
+     "Apple"
+    ]
+   }
+  },
+  {
+   "id": "oos-01",
+   "query": "A laptop backpack under ₹3000",
+   "type": "out_of_scope",
+   "gold": {
+    "category_slug": "backpack",
+    "max_price": 3000,
+    "must_haves": []
+   }
+  },
+  {
+   "id": "oos-02",
+   "query": "Mixer grinder under ₹3500",
+   "type": "out_of_scope",
+   "gold": {
+    "category_slug": "kitchen_appliance",
+    "max_price": 3500,
+    "must_haves": []
+   }
+  },
+  {
+   "id": "oos-03",
+   "query": "Television under ₹15,000",
+   "type": "out_of_scope",
+   "gold": {
+    "category_slug": "other",
+    "max_price": 15000,
+    "must_haves": []
+   }
+  },
+  {
+   "id": "oos-04",
+   "query": "A comfortable sofa under ₹20,000",
+   "type": "out_of_scope",
+   "gold": {
+    "category_slug": "other",
+    "max_price": 20000,
+    "must_haves": []
+   }
+  },
+  {
+   "id": "oos-05",
+   "query": "Something nice for my brother's birthday",
+   "type": "out_of_scope",
+   "gold": {
+    "category_slug": "other",
+    "max_price": null,
+    "must_haves": []
+   }
+  },
+  {
+   "id": "oos-06",
+   "query": "Headphones",
+   "type": "vague",
+   "gold": {
+    "category_slug": "headphones",
+    "max_price": null,
+    "must_haves": []
+   }
+  }
+ ]
+}
