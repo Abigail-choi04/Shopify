@@ -38,3 +38,11 @@ class AgentState(TypedDict, total=False):
     requirement_results: dict  # product_id -> list[RequirementResult]
     product_call_ids: dict  # product_id -> the tool call that retrieved it (search, or the web fallback)
     data_source_note: str  # e.g. "Flipkart snapshot, captured 8 Oct 2026"
+
+    # --- Replanning (constraint relaxation) ---
+    original_intent: ParsedIntent  # what the shopper actually asked for, before anything was loosened
+    replan_count: int  # how many loosening steps have been applied
+    relaxations: list  # list[replan.Relaxation], in the order they were applied
+
+    # --- Clarifying questions ---
+    allow_clarification: bool  # False when the query already answers an earlier question

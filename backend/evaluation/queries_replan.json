@@ -1,0 +1,248 @@
+{
+ "description": "ShopMate AI stress set for replanning and clarifying questions (run with: python -m evaluation.live_eval --set replan). Types: impossible (designed so that, most likely, no product meets every requirement within the budget; the evaluation records whether that actually happened and what the agent did), unclear (names no kind of product: the agent should ask one question), clear_control (a clear request: the agent must NOT ask a question). 'gold' is the correct parsed intent; 'other' means no category the catalog covers.",
+ "queries": [
+  {
+   "id": "imp-01",
+   "query": "Noise cancelling earbuds under ₹500",
+   "type": "impossible",
+   "gold": {
+    "category_slug": "headphones",
+    "max_price": 500,
+    "must_haves": [
+     "noise cancelling"
+    ]
+   }
+  },
+  {
+   "id": "imp-02",
+   "query": "True wireless earbuds with 60 hours battery under ₹700",
+   "type": "impossible",
+   "gold": {
+    "category_slug": "headphones",
+    "max_price": 700,
+    "must_haves": [
+     "true wireless",
+     "60 hours battery"
+    ]
+   }
+  },
+  {
+   "id": "imp-03",
+   "query": "Phone with 12GB RAM under ₹9,000",
+   "type": "impossible",
+   "gold": {
+    "category_slug": "smartphone",
+    "max_price": 9000,
+    "must_haves": [
+     "12GB RAM"
+    ]
+   }
+  },
+  {
+   "id": "imp-04",
+   "query": "5G phone with a 7000mAh battery under ₹8,000",
+   "type": "impossible",
+   "gold": {
+    "category_slug": "smartphone",
+    "max_price": 8000,
+    "must_haves": [
+     "5G",
+     "7000mAh"
+    ]
+   }
+  },
+  {
+   "id": "imp-05",
+   "query": "Phone with NFC and a 120Hz display under ₹7,000",
+   "type": "impossible",
+   "gold": {
+    "category_slug": "smartphone",
+    "max_price": 7000,
+    "must_haves": [
+     "NFC",
+     "120Hz"
+    ]
+   }
+  },
+  {
+   "id": "imp-06",
+   "query": "Gaming laptop under ₹30,000",
+   "type": "impossible",
+   "gold": {
+    "category_slug": "laptop",
+    "max_price": 30000,
+    "must_haves": [
+     "gaming"
+    ]
+   }
+  },
+  {
+   "id": "imp-07",
+   "query": "Laptop with dedicated graphics and 16GB RAM under ₹35,000",
+   "type": "impossible",
+   "gold": {
+    "category_slug": "laptop",
+    "max_price": 35000,
+    "must_haves": [
+     "dedicated graphics",
+     "16GB RAM"
+    ]
+   }
+  },
+  {
+   "id": "imp-08",
+   "query": "Laptop under ₹15,000 with an SSD and a touchscreen",
+   "type": "impossible",
+   "gold": {
+    "category_slug": "laptop",
+    "max_price": 15000,
+    "must_haves": [
+     "SSD",
+     "touchscreen"
+    ]
+   }
+  },
+  {
+   "id": "imp-09",
+   "query": "Smartwatch with GPS under ₹1,000",
+   "type": "impossible",
+   "gold": {
+    "category_slug": "smartwatch",
+    "max_price": 1000,
+    "must_haves": [
+     "GPS"
+    ]
+   }
+  },
+  {
+   "id": "imp-10",
+   "query": "Smartwatch with an AMOLED display and calling under ₹800",
+   "type": "impossible",
+   "gold": {
+    "category_slug": "smartwatch",
+    "max_price": 800,
+    "must_haves": [
+     "AMOLED",
+     "calling"
+    ]
+   }
+  },
+  {
+   "id": "imp-11",
+   "query": "Running shoes with a mesh upper under ₹400",
+   "type": "impossible",
+   "gold": {
+    "category_slug": "running_shoes",
+    "max_price": 400,
+    "must_haves": [
+     "mesh"
+    ]
+   }
+  },
+  {
+   "id": "imp-12",
+   "query": "Women's running shoes under 250 g for less than ₹600",
+   "type": "impossible",
+   "gold": {
+    "category_slug": "running_shoes",
+    "max_price": 600,
+    "must_haves": [
+     "women",
+     "under 250 g"
+    ]
+   }
+  },
+  {
+   "id": "unc-01",
+   "query": "Something for my dad's birthday under ₹3,000",
+   "type": "unclear",
+   "gold": {
+    "category_slug": "other",
+    "max_price": 3000,
+    "must_haves": []
+   }
+  },
+  {
+   "id": "unc-02",
+   "query": "I need a gift for my sister",
+   "type": "unclear",
+   "gold": {
+    "category_slug": "other",
+    "max_price": null,
+    "must_haves": []
+   }
+  },
+  {
+   "id": "unc-03",
+   "query": "What should I buy with ₹10,000?",
+   "type": "unclear",
+   "gold": {
+    "category_slug": "other",
+    "max_price": 10000,
+    "must_haves": []
+   }
+  },
+  {
+   "id": "unc-04",
+   "query": "Help me pick something for college",
+   "type": "unclear",
+   "gold": {
+    "category_slug": "other",
+    "max_price": null,
+    "must_haves": []
+   }
+  },
+  {
+   "id": "unc-05",
+   "query": "Suggest something useful under ₹2,000",
+   "type": "unclear",
+   "gold": {
+    "category_slug": "other",
+    "max_price": 2000,
+    "must_haves": []
+   }
+  },
+  {
+   "id": "ctl-01",
+   "query": "Earphones",
+   "type": "clear_control",
+   "gold": {
+    "category_slug": "headphones",
+    "max_price": null,
+    "must_haves": []
+   }
+  },
+  {
+   "id": "ctl-02",
+   "query": "A laptop",
+   "type": "clear_control",
+   "gold": {
+    "category_slug": "laptop",
+    "max_price": null,
+    "must_haves": []
+   }
+  },
+  {
+   "id": "ctl-03",
+   "query": "Smartwatch under ₹3,000",
+   "type": "clear_control",
+   "gold": {
+    "category_slug": "smartwatch",
+    "max_price": 3000,
+    "must_haves": []
+   }
+  },
+  {
+   "id": "ctl-04",
+   "query": "Running shoes for men",
+   "type": "clear_control",
+   "gold": {
+    "category_slug": "running_shoes",
+    "max_price": null,
+    "must_haves": [
+     "men"
+    ]
+   }
+  }
+ ]
+}

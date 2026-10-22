@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import './App.css'
 import './extras.css'
+import './agent-notes.css'
 import { sendChat } from './api'
 import { EXAMPLE_QUERIES } from './data/examples'
 import ReasoningTrace from './components/ReasoningTrace'
@@ -18,8 +19,12 @@ function App() {
   const [error, setError] = useState('')
   const [visibleSteps, setVisibleSteps] = useState(0)
   const [selectedProduct, setSelectedProduct] = useState(null)
+  // Clarifying questions: the request the agent asked about, and the shopper's reply being typed.
+  const [askedQuery, setAskedQuery] = useState('')
+  const [clarifyAnswer, setClarifyAnswer] = useState('')
   const timeoutsRef = useRef([])
   const runIdRef = useRef(0)
+  const lastRequestRef = useRef({ text: '', allowClarification: true }) // what "Try again" re-sends
 
   const clearPendingTimeouts = () => {
     timeoutsRef.current.forEach(clearTimeout)
@@ -46,9 +51,10 @@ function App() {
     })
   }
 
-  const runPipeline = async (submittedQuery) => {
+  const runPipeline = async (submittedQuery, { allowClarification = true } = {}) => {
     const text = submittedQuery.trim()
     if (!text) return
+    lastRequestRef.current = { text, allowClarification }
 
     clearPendingTimeouts()
     const runId = runIdRef.current + 1
@@ -59,10 +65,12 @@ function App() {
     setResult(null)
     setVisibleSteps(0)
     setSelectedProduct(null)
+    setClarifyAnswer('')
 
     try {
-      const data = await sendChat(text)
+      const data = await sendChat(text, { allowClarification })
       if (runIdRef.current !== runId) return // a newer search replaced this one
+      setAskedQuery(data.clarification ? text : '')
       setResult(data)
       setStage('thinking')
       revealTrace(data.trace, runId)
@@ -83,6 +91,21 @@ function App() {
     runPipeline(exampleQuery)
   }
 
+  // The shopper answered the agent's question: send the original request plus the answer,
+  // and tell the agent not to ask again (it searches with whatever it now knows).
+  const handleClarifyAnswer = (e) => {
+    e.preventDefault()
+    const answer = clarifyAnswer.trim()
+    if (!answer) return
+    const combined = `${askedQuery} — ${answer}`
+    setQuery(combined)
+    runPipeline(combined, { allowClarification: false })
+  }
+
+  const handleClarifySkip = () => {
+    runPipeline(askedQuery, { allowClarification: false })
+  }
+
   const handleReset = () => {
     clearPendingTimeouts()
     runIdRef.current += 1
@@ -92,6 +115,8 @@ function App() {
     setVisibleSteps(0)
     setSelectedProduct(null)
     setQuery('')
+    setAskedQuery('')
+    setClarifyAnswer('')
   }
 
   const busy = stage === 'loading' || stage === 'thinking'
@@ -146,7 +171,10 @@ function App() {
         <div className="status-box status-box--error" role="alert">
           <strong>Couldn’t complete that search.</strong>
           <p>{error}</p>
-          <button className="reset-btn" onClick={() => runPipeline(query)}>
+          <button
+            className="reset-btn"
+            onClick={() => runPipeline(lastRequestRef.current.text || query, lastRequestRef.current)}
+          >
             Try again
           </button>
         </div>
@@ -178,13 +206,57 @@ function App() {
           <h2 className="section-label">Reasoning trace</h2>
           <ReasoningTrace steps={result.trace} visibleCount={visibleSteps} />
 
-          {stage === 'results' && (
-            <>
-              <ProductRecommendations result={result} onSelectProduct={setSelectedProduct} />
-              <button className="reset-btn" onClick={handleReset}>
-                Start a new search
+          {stage === 'results' && result.clarification && (
+            <div className="clarify-card">
+              <span className="clarify-card__label">The agent needs one detail first</span>
+              <p className="clarify-card__question">{result.clarification}</p>
+              <form className="clarify-card__form" onSubmit={handleClarifyAnswer}>
+                <input
+                  type="text"
+                  value={clarifyAnswer}
+                  onChange={(e) => setClarifyAnswer(e.target.value)}
+                  placeholder="e.g. earphones, or a smartwatch"
+                  className="query-form__input"
+                  aria-label="Your answer"
+                  autoFocus
+                />
+                <button type="submit" className="query-form__submit-btn" disabled={!clarifyAnswer.trim()}>
+                  Answer
+                </button>
+              </form>
+              <button type="button" className="clarify-card__skip" onClick={handleClarifySkip}>
+                Skip the question and search anyway
               </button>
+            </div>
+          )}
+
+          {stage === 'results' && !result.clarification && (
+            <>
+              {result.relaxations && result.relaxations.length > 0 && (
+                <div className="relax-note" role="note">
+                  <span className="relax-note__title">Changed to find matches</span>
+                  <ul className="relax-note__list">
+                    {result.relaxations.map((relaxation, index) => (
+                      <li key={index}>
+                        {relaxation.message}
+                        <span className="relax-note__who">
+                          {relaxation.chosenBy === 'model'
+                            ? 'Chosen by the agent from the options the catalog allowed'
+                            : 'Chosen by the fixed fallback rule'}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <ProductRecommendations result={result} onSelectProduct={setSelectedProduct} />
             </>
+          )}
+
+          {stage === 'results' && (
+            <button className="reset-btn" onClick={handleReset}>
+              Start a new search
+            </button>
           )}
         </div>
       )}

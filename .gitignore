@@ -15,4 +15,4 @@ frontend/dist/
 # --- OS / Editor ---
 .DS_Store
 .vscode/
-*.log
+*.logbackend/venv/

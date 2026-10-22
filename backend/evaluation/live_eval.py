@@ -8,6 +8,7 @@ Run from the backend/ folder (with your .env loaded, i.e. GROQ_API_KEY set):
     python -m evaluation.live_eval --repeat 3       # run each query 3 times (LLM answers vary)
     python -m evaluation.live_eval --baseline       # LLM-only baseline: no tools, no snapshot, no verifier
     python -m evaluation.live_eval --rescore        # recompute the summary from the saved file (no model calls)
+    python -m evaluation.live_eval --set replan     # the replanning / clarifying-question stress set (21 queries)
 
 The run is RESUMABLE: every finished query is saved at once, and running the same command again
 skips what is already done. If Groq's daily token limit is hit the run stops cleanly; run it
@@ -18,6 +19,10 @@ What the full pipeline run measures (per query, then averaged):
   - first-draft claim accuracy   how many of the explanation claims the model drafted FIRST passed the verifier
   - rewrites / dropped claims    how often one rewrite was needed, and how many claims were finally removed
   - data-only fallback    how often the model's output was unusable
+  - replanning            how often nothing met every requirement, how often the agent loosened one requirement,
+                          whether that brought products back, and whether the model or the fixed rule chose
+  - clarifying questions  how often a question was asked, split into requests that name no kind of product
+                          (asking is right) and requests the catalog covers (asking is a false alarm)
   - latency, errors
 
 What the baseline measures: the same model asked for 3 recommendations with no data access. Each
@@ -25,7 +30,8 @@ recommended product name is matched against the saved snapshot ("grounded") and 
 compared with the real listing price. The name matching is approximate, so read it as an estimate.
 
 Per-query details (with product titles) go to data_private/eval/ (git-ignored);
-aggregate numbers go to evaluation/results/ (safe to commit).
+aggregate numbers go to evaluation/results/ (safe to commit). The replan set uses its own files
+(live_pipeline_replan.jsonl / live_pipeline_replan.json), so it never mixes with the core results.
 """
 
 import argparse
@@ -41,9 +47,12 @@ from dotenv import load_dotenv
 
 from app.agent.ranking import get_snapshot_category
 from app.services import serpapi_client, snapshot_store
-from evaluation.common import RESULTS_DIR, load_queries, pct, private_dir
+from evaluation.common import QUERY_SETS, RESULTS_DIR, load_queries, pct, private_dir
 
 SEARCH_ACTION = re.compile(r'search_products\(category="([^"]*)", max_price=([^)]*)\)')
+REPLAN_ACTION = "choose_relaxation("
+CLARIFY_ACTION = "ask_clarifying_question("
+NO_MATCH_LINE = "No matching products were found"
 REWRITE_LINE = re.compile(r"(\d+) of (\d+) claim\(s\) verified; (\d+) failed\. Asking for one rewrite")
 
 
@@ -91,20 +100,37 @@ def score_planner(gold: dict, predicted_slug: str | None, predicted_budget: floa
 
 
 def parse_trace(trace) -> dict:
+    """
+    Reads the planner's category and budget from the FIRST search (later searches may use a budget that
+    replanning raised, which is not what the planner understood), plus the replanning / question steps.
+    """
     slug = budget = None
     first_checked = first_failed = None
     data_only = False
+    searches = replans = 0
+    clarified = initial_no_match = False
     for step in trace:
         match = SEARCH_ACTION.search(step.text)
         if match:
-            slug = match.group(1)
-            budget = None if match.group(2).strip() == "None" else float(match.group(2))
+            searches += 1
+            if searches == 1:
+                slug = match.group(1)
+                budget = None if match.group(2).strip() == "None" else float(match.group(2))
+        if step.type == "action" and step.text.startswith(REPLAN_ACTION):
+            replans += 1
+        if step.type == "action" and step.text.startswith(CLARIFY_ACTION):
+            clarified = True
+        if NO_MATCH_LINE in step.text and replans == 0:
+            initial_no_match = True
         rewrite = REWRITE_LINE.search(step.text)
         if rewrite and first_checked is None:
             first_checked, first_failed = int(rewrite.group(2)), int(rewrite.group(3))
         if "malformed output" in step.text:
             data_only = True
-    return {"slug": slug, "budget": budget, "first_checked": first_checked, "first_failed": first_failed, "data_only_fallback": data_only}
+    return {
+        "slug": slug, "budget": budget, "first_checked": first_checked, "first_failed": first_failed,
+        "data_only_fallback": data_only, "replans": replans, "clarified": clarified, "initial_no_match": initial_no_match,
+    }
 
 
 # ------------------------------------------------------- full pipeline
@@ -138,19 +164,67 @@ async def run_pipeline_once(query: dict) -> dict:
         final_claims_dropped=verification.claimsDropped if verification else 0,
         data_only_fallback=info["data_only_fallback"],
         titles=[p.title for p in response.products],
+        initial_no_match=info["initial_no_match"],
+        replans=info["replans"],
+        relaxations=[{"kind": r.kind, "chosen_by": r.chosenBy, "requirement": r.requirement,
+                      "old_budget": r.oldBudget, "new_budget": r.newBudget} for r in response.relaxations],
+        clarification_asked=response.clarification is not None,
+        gold_in_catalog=get_snapshot_category(query["gold"]["category_slug"]) is not None,
     )
     return record
 
 
-def summarize_pipeline(records: list[dict]) -> dict:
+def summarize_replanning(ok: list[dict]) -> dict:
+    """Older saved runs (before replanning existed) simply count as 'no replan, no question'."""
+    no_match = [r for r in ok if r.get("initial_no_match")]
+    replanned = [r for r in ok if r.get("replans", 0) > 0]
+    relaxations = [x for r in replanned for x in r.get("relaxations", [])]
+    asked = [r for r in ok if r.get("clarification_asked")]
+    in_catalog = [r for r in ok if r.get("gold_in_catalog")]
+    not_in_catalog = [r for r in ok if "gold_in_catalog" in r and not r["gold_in_catalog"]]
+    return {
+        "replanning": {
+            "runs_with_no_full_match_at_first": len(no_match),
+            "runs_replanned": len(replanned),
+            "replanned_runs_ending_with_products": sum(1 for r in replanned if r["products"] > 0),
+            "no_match_runs_left_empty": sum(1 for r in no_match if r.get("replans", 0) == 0 and r["products"] == 0),
+            "relaxation_kinds": dict(Counter(x["kind"] for x in relaxations)),
+            "chosen_by": dict(Counter(x["chosen_by"] for x in relaxations)),
+        },
+        "clarification": {
+            "runs_with_question": len(asked),
+            "asked_when_no_covered_category_pct": pct(sum(1 for r in not_in_catalog if r.get("clarification_asked")), len(not_in_catalog)),
+            "asked_when_category_covered_false_alarm_pct": pct(sum(1 for r in in_catalog if r.get("clarification_asked")), len(in_catalog)),
+        },
+        "by_type": {
+            t: {
+                "runs": len(rs),
+                "replanned": sum(1 for r in rs if r.get("replans", 0) > 0),
+                "with_products": sum(1 for r in rs if r["products"] > 0),
+                "asked_question": sum(1 for r in rs if r.get("clarification_asked")),
+            }
+            for t, rs in sorted(_group_by_type(ok).items())
+        },
+    }
+
+
+def _group_by_type(records: list[dict]) -> dict[str, list[dict]]:
+    groups: dict[str, list[dict]] = {}
+    for r in records:
+        groups.setdefault(r.get("type", "?"), []).append(r)
+    return groups
+
+
+def summarize_pipeline(records: list[dict], query_set: str = "core") -> dict:
     ok = [r for r in records if "error" not in r]
     planner = [r["planner"] for r in ok]
     with_products = [r for r in ok if r["products"] > 0]
     first_claims = sum(r["first_draft_claims"] for r in with_products)
     first_failed = sum(r["first_draft_failed"] for r in with_products)
     return {
+        "query_set": query_set,
         "queries_completed": len({r["id"] for r in ok}),
-        "queries_total": len(load_queries()),
+        "queries_total": len(load_queries(query_set)),
         "runs": len(ok),
         "planner": {
             "category_correct_pct": pct(sum(p["category_ok"] for p in planner), len(planner)),
@@ -169,6 +243,7 @@ def summarize_pipeline(records: list[dict]) -> dict:
         "data_only_fallback_runs": sum(1 for r in ok if r["data_only_fallback"]),
         "median_seconds": round(statistics.median(r["seconds"] for r in ok), 1) if ok else None,
         "p90_seconds": round(sorted(r["seconds"] for r in ok)[int(0.9 * (len(ok) - 1))], 1) if ok else None,
+        **summarize_replanning(ok),
     }
 
 
@@ -269,19 +344,21 @@ def regrade_baseline(records: list[dict]) -> list[dict]:
 
 
 def _gold_slug(query_id: str) -> str | None:
-    for query in load_queries():
-        if query["id"] == query_id:
-            return query["gold"]["category_slug"]
+    for query_set in QUERY_SETS:
+        for query in load_queries(query_set):
+            if query["id"] == query_id:
+                return query["gold"]["category_slug"]
     return None
 
 
-def summarize_baseline(records: list[dict]) -> dict:
+def summarize_baseline(records: list[dict], query_set: str = "core") -> dict:
     scoped = [r for r in records if r.get("in_scope") and "error" not in r and r.get("recommendations")]
     recs = [x for r in scoped for x in r.get("recommendations", [])]
     grounded = [x for x in recs if x["grounded"]]
     return {
+        "query_set": query_set,
         "queries_completed": len({r["id"] for r in records if "error" not in r}),
-        "queries_total": len(load_queries()),
+        "queries_total": len(load_queries(query_set)),
         "in_scope_runs": len(scoped),
         "recommendations": len(recs),
         "grounded_in_catalog_pct": pct(len(grounded), len(recs)),
@@ -379,6 +456,8 @@ def main() -> None:
     parser.add_argument("--repeat", type=int, default=1, help="runs per query")
     parser.add_argument("--type", default="", help="only queries of this type (e.g. multi)")
     parser.add_argument("--pause", type=float, default=2.0, help="seconds between calls (free-tier rate limits)")
+    parser.add_argument("--set", dest="query_set", choices=sorted(QUERY_SETS), default="core",
+                        help="core = the 66 main queries; replan = the replanning / clarifying-question stress set")
     args = parser.parse_args()
 
     load_dotenv()
@@ -390,8 +469,10 @@ def main() -> None:
         raise SystemExit("GROQ_API_KEY is not set. Put it in backend/.env first.")
 
     name = "baseline" if args.baseline else "pipeline"
+    if args.query_set != "core":
+        name += f"_{args.query_set}"  # its own files: never mixed into the core results
     path = private_dir() / f"live_{name}.jsonl"
-    queries = load_queries()
+    queries = load_queries(args.query_set)
     if args.type:
         queries = [q for q in queries if q["type"] == args.type]
     if args.limit:
@@ -403,7 +484,7 @@ def main() -> None:
         records = asyncio.run(run_all(queries, args.baseline, args.repeat, args.pause, path))
     if args.baseline:
         records = regrade_baseline(records)
-    summary = summarize_baseline(records) if args.baseline else summarize_pipeline(records)
+    summary = summarize_baseline(records, args.query_set) if args.baseline else summarize_pipeline(records, args.query_set)
     RESULTS_DIR.mkdir(exist_ok=True)
     (RESULTS_DIR / f"live_{name}.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
     print("\n" + json.dumps(summary, indent=1))

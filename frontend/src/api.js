@@ -54,8 +54,13 @@ async function request(path, options = {}) {
 const post = (path, payload) =>
   request(path, { method: 'POST', body: payload === undefined ? undefined : JSON.stringify(payload) })
 
-/** Ask the shopping agent. Returns { aisle, parsedIntent, trace, products, ... } */
-export const sendChat = (query) => post('/chat', { query })
+/**
+ * Ask the shopping agent. Returns { aisle, parsedIntent, trace, products, relaxations, clarification, ... }
+ * allowClarification: false when `query` already contains the answer to the agent's question,
+ * so the agent searches instead of asking again.
+ */
+export const sendChat = (query, { allowClarification = true } = {}) =>
+  post('/chat', { query, allow_clarification: allowClarification })
 
 /** Mock Cart Mandate (Phase 7). Each returns { mandate, events, storage }. */
 export const createMandate = (productId, quantity = 1) => post('/mandates', { product_id: productId, quantity })

@@ -154,12 +154,15 @@ def test_snapshot_search_filters_ranks_and_verifies(monkeypatch, write_snapshot)
     assert all(p.source.startswith("Flipkart") for p in response.products)
 
 
-def test_requirements_that_remove_everything_are_named(monkeypatch, write_snapshot):
+def test_requirements_that_remove_everything_are_named_then_relaxed(monkeypatch, write_snapshot):
     write_snapshot({"smartphones": [_phone_record("A", 4, 9000), _phone_record("B", 6, 12000)]})
     _setup(monkeypatch)
     response = asyncio.run(graph_module.run_agent("8GB RAM phone"))
-    assert response.products == []
-    assert "8GB RAM" in _trace_text(response)
+    # Nothing has 8 GB, so the trace names the blocker, then replanning drops it and says so.
+    assert "contradicts '8GB RAM'" in _trace_text(response)
+    assert len(response.products) == 2
+    assert [(r.kind, r.requirement) for r in response.relaxations] == [("drop_requirement", "8GB RAM")]
+    assert response.parsedIntent.mustHaves == ["8GB RAM"]  # still shows what the shopper asked for
 
 
 def test_category_outside_the_snapshot_says_so(monkeypatch, write_snapshot):

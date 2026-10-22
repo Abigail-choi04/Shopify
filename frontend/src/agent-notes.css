@@ -1,0 +1,96 @@
+/* ==========================================================================
+   ShopMate AI — replanning notice and clarifying-question card
+   Same warehouse look as App.css (uses its colour variables).
+   ========================================================================== */
+
+/* "What I changed to find these" — a yellow amendment slip */
+.relax-note {
+  margin: 0 0 1.6rem;
+  padding: 0.9rem 1.1rem;
+  background: #fff4cc;
+  border: 2px solid var(--charcoal);
+  border-left: 10px solid var(--safety-yellow);
+  border-radius: 4px;
+  box-shadow: 4px 4px 0 var(--charcoal);
+  color: var(--ink);
+}
+
+.relax-note__title {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.relax-note__list {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.relax-note__list li {
+  margin: 0.2rem 0;
+  line-height: 1.45;
+}
+
+.relax-note__who {
+  display: block;
+  margin-top: 0.15rem;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+}
+
+/* The agent's one question — a request slip with a reply line */
+.clarify-card {
+  margin: 0 0 2rem;
+  padding: 1.1rem 1.2rem 1.2rem;
+  background: var(--paper-white);
+  border: 3px solid var(--charcoal);
+  border-radius: 6px;
+  box-shadow: 5px 5px 0 var(--charcoal);
+}
+
+.clarify-card__label {
+  display: block;
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--safety-orange-dark);
+}
+
+.clarify-card__question {
+  margin: 0.3rem 0 0.9rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.clarify-card__form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.clarify-card__form .query-form__input {
+  min-width: 0;
+  flex: 1 1 240px;
+}
+
+.clarify-card__skip {
+  margin: 0.8rem 0 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.clarify-card__skip:hover {
+  color: var(--ink);
+}

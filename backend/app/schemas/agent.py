@@ -11,7 +11,8 @@ Phase 5 additions are all OPTIONAL / additive (`claims` on a product,
 `verification` on the response), so the existing frontend keeps working
 unchanged and can start showing them whenever we choose. The same goes
 for the Phase 4 additions (`requirements`, `url`, `source`, ... on a
-product, `dataSource` on the response).
+product, `dataSource` on the response), and for the replanning and
+clarifying-question additions (`relaxations`, `clarification`).
 """
 
 from typing import Optional, Union
@@ -103,6 +104,18 @@ class RankedProduct(BaseModel):
     requirements: list[RequirementOut] = []
 
 
+class RelaxationOut(BaseModel):
+    """One requirement the agent loosened because nothing met everything (replanning)."""
+
+    kind: str  # "raise_budget" | "drop_requirement"
+    message: str  # plain sentence for the shopper, written by code, e.g. "...so the budget was raised to ₹1,000."
+    chosenBy: str  # "model" (the LLM picked it from the offered options) | "rule" (fixed fallback rule)
+    requirement: Optional[str] = None  # the must-have that was dropped
+    oldBudget: Optional[float] = None
+    newBudget: Optional[float] = None
+    productsUnlocked: int = 0
+
+
 class ParsedIntentOut(BaseModel):
     category: str
     budget: str
@@ -117,7 +130,14 @@ class ChatResponse(BaseModel):
     products: list[RankedProduct]
     verification: Optional[VerificationSummary] = None  # Phase 5
     dataSource: Optional[str] = None  # Phase 4: where the products came from, and how old the data is
+    # Replanning: what was loosened to find these products (empty when nothing was).
+    relaxations: list[RelaxationOut] = []
+    # Clarifying questions: when set, the agent is asking this instead of answering (products is empty).
+    clarification: Optional[str] = None
 
 
 class ChatRequest(BaseModel):
     query: str
+    # False when the query already contains the shopper's answer to a clarifying question,
+    # so the agent never asks twice in a row.
+    allow_clarification: bool = True

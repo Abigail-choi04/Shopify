@@ -1,8 +1,10 @@
 {
- "runs": 66,
- "in_scope_runs": 42,
- "recommendations": 123,
- "grounded_in_catalog_pct": 5.7,
- "price_within_10pct_of_listing_pct_of_grounded": 14.3,
- "price_within_10pct_pct_of_all": 0.8
+ "queries_completed": 66,
+ "queries_total": 66,
+ "in_scope_runs": 60,
+ "recommendations": 180,
+ "grounded_in_catalog_pct": 3.3,
+ "grounded_count": 6,
+ "price_checked_count": 4,
+ "price_within_10pct_of_listing_pct_of_grounded": 0.0
 }

@@ -26,12 +26,16 @@ async def chat(request: ChatRequest):
     Runs the full planner -> search -> rank -> explain -> verify -> respond
     agent loop for one query. No conversation history yet (that's Phase 6
     session memory) — every call is a fresh, independent run.
+
+    Clarifying questions stay stateless too: if the agent asks a question,
+    the frontend sends the original request plus the answer as a new query
+    with allow_clarification=False, so the agent can't ask again.
     """
     if not request.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty.")
 
     try:
-        return await run_agent(request.query)
+        return await run_agent(request.query, allow_clarification=request.allow_clarification)
     except RuntimeError as e:
         # Raised by groq_client if GROQ_API_KEY is missing — surface it
         # clearly instead of a generic 500.

@@ -10,6 +10,10 @@ DIFFERENT from the coarser category FakeStoreAPI actually stocks
 mapping happens separately in app/agent/ranking.py's
 FAKESTORE_CATEGORY_MAP, because search (what data exists) and ranking
 (what attributes matter) are different concerns.
+
+`clarification_question` (clarifying questions): the planner fills it only
+when the request doesn't name any kind of product ("something for my dad").
+The graph then asks that one question instead of guessing a category.
 """
 
 from typing import Optional
@@ -32,3 +36,7 @@ class ParsedIntent(BaseModel):
         description="Attributes the user explicitly required, e.g. ['Active Noise Cancellation', 'Wireless'].",
     )
     raw_query: str = Field(description="The original, unmodified user query.")
+    clarification_question: Optional[str] = Field(
+        default=None,
+        description="Set by the planner only when the request doesn't say what kind of product is wanted; one short question.",
+    )
