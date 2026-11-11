@@ -363,5 +363,64 @@
     "caught_pct": 100.0
    }
   }
+ },
+ "E_replanning": {
+  "core": {
+   "queries_checked": 66,
+   "needed_replanning": 6,
+   "had_at_least_one_option": 5,
+   "rescued": 5,
+   "rescued_pct_of_needed": 83.3,
+   "not_rescued_ids": [
+    "phn-10"
+   ],
+   "steps_by_kind": {
+    "raise_budget": 1,
+    "drop_requirement": 4
+   },
+   "rescued_in_one_step": 5,
+   "budget_raise_pct_median": 41.7,
+   "budget_raise_pct_max": 41.7,
+   "by_type": {
+    "brand": {
+     "needed": 1,
+     "rescued": 1
+    },
+    "easy": {
+     "needed": 3,
+     "rescued": 3
+    },
+    "tight": {
+     "needed": 2,
+     "rescued": 1
+    }
+   },
+   "note": "Offline: the fixed rule makes the pick. Which option the language model picks is measured by live_eval --set replan."
+  },
+  "replan": {
+   "queries_checked": 21,
+   "needed_replanning": 7,
+   "had_at_least_one_option": 5,
+   "rescued": 5,
+   "rescued_pct_of_needed": 71.4,
+   "not_rescued_ids": [
+    "imp-04",
+    "imp-08"
+   ],
+   "steps_by_kind": {
+    "drop_requirement": 4,
+    "raise_budget": 1
+   },
+   "rescued_in_one_step": 5,
+   "budget_raise_pct_median": 28.6,
+   "budget_raise_pct_max": 28.6,
+   "by_type": {
+    "impossible": {
+     "needed": 7,
+     "rescued": 5
+    }
+   },
+   "note": "Offline: the fixed rule makes the pick. Which option the language model picks is measured by live_eval --set replan."
+  }
  }
 }

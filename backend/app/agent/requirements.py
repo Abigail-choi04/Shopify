@@ -220,12 +220,23 @@ RULES: dict[str, list[tuple[str, Rule]]] = {
 }
 
 
-def _brand_result(requirement: str, product: Product, known_brands: set[str] | None) -> RequirementResult | None:
+def _mentioned_brands(requirement: str, known_brands: set[str] | None) -> set[str]:
+    """Brand names (or well-known model names such as 'iPhone') that a requirement text mentions."""
     text = requirement.lower()
     mentioned = {BRAND_ALIASES[a] for a in BRAND_ALIASES if re.search(rf"\b{re.escape(a)}\b", text)}
     for brand in known_brands or set():
         if re.search(rf"(?<![\w]){re.escape(brand)}(?![\w])", text):
             mentioned.add(brand)
+    return mentioned
+
+
+def mentions_brand(requirement: str, known_brands: set[str] | None = None) -> bool:
+    """True when the shopper named a brand in this requirement (replanning never gives these up)."""
+    return bool(_mentioned_brands(requirement, known_brands))
+
+
+def _brand_result(requirement: str, product: Product, known_brands: set[str] | None) -> RequirementResult | None:
+    mentioned = _mentioned_brands(requirement, known_brands)
     if not mentioned:
         return None
     if not product.brand:

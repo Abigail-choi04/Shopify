@@ -7,7 +7,8 @@ picks one:
 
     raise_budget       raise the budget to the cheapest price at which every requirement is met
                        (only offered if that is at most MAX_BUDGET_RAISE above the shopper's budget)
-    drop_requirement   keep the budget, give up ONE must-have (offered once per must-have)
+    drop_requirement   keep the budget, give up ONE must-have (offered once per must-have, except a brand
+                       the shopper named: the brand is never given up)
 
 Who decides what:
   - CODE builds the options from the real catalog, so every option is guaranteed to bring
@@ -22,6 +23,7 @@ Nothing here invents a product or a price: every number comes from the catalog.
 import math
 from dataclasses import dataclass, field
 
+from app.agent.requirements import mentions_brand
 from app.agent.tools import filter_by_requirements
 from app.schemas.intent import ParsedIntent
 from app.schemas.product import Product
@@ -98,6 +100,8 @@ def build_options(category_products: list[Product], intent: ParsedIntent, known_
     # 2) Keep the budget, drop one must-have.
     in_budget = _within(category_products, budget)
     for index, requirement in enumerate(musts, start=1):
+        if mentions_brand(requirement, known_brands):
+            continue  # a brand the shopper named is not something to trade away
         rest = [m for m in musts if m != requirement]
         kept, _, _ = filter_by_requirements(in_budget, rest, known_brands)
         if kept:

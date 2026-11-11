@@ -4,7 +4,7 @@ ShopMate AI — Offline evaluation (no Groq key, no internet)
 Run from the backend/ folder:
     python -m evaluation.offline_eval
 
-Four measurements, all on the saved Flipkart snapshot and all repeatable:
+Five measurements, all on the saved Flipkart snapshot and all repeatable:
 
   A. Data coverage         how many products state each spec clearly, and how many contradict themselves
   B. Extraction check      do the spec facts we extracted agree with what the product TITLE says (RAM, storage)?
@@ -13,6 +13,10 @@ Four measurements, all on the saved Flipkart snapshot and all repeatable:
                            model is involved. Also shows what grouping variants and review-weighting change.
   D. Verifier fault test   take true claims about every product, corrupt them in known ways, and count how many
                            corruptions the verifier catches (and how many TRUE claims it wrongly rejects).
+
+  E. Replanning            for the queries where nothing meets every requirement, would loosening ONE
+                           requirement (the fixed rule's pick; the model's pick is measured live) bring
+                           real products back, and how much does it change the request?
 
 Writes evaluation/results/offline_results.json (aggregate numbers only).
 """
@@ -27,11 +31,13 @@ from collections import Counter, defaultdict
 
 from app.agent import tools as agent_tools
 from app.agent.ranking import get_snapshot_category
+from app.agent.replan import MAX_REPLANS, apply_option, build_options, choose_by_rule
 from app.agent.requirements import MET
 from app.agent.tools import filter_by_requirements, rank_products, search_products
 from app.agent.verifier import verify_claim
 from app.normalizers.spec_facts import COMPARISON_SPECS
 from app.schemas.agent import Claim
+from app.schemas.intent import ParsedIntent
 from app.services import serpapi_client, snapshot_store
 from evaluation.common import RESULTS_DIR, load_queries, pct
 
@@ -281,6 +287,74 @@ def fault_test(snapshot, seed: int = 7) -> dict:
 # ------------------------------------------------------------------- main
 
 
+# ------------------------------------------------------- E. replanning
+
+
+async def replan_one(query: dict) -> dict | None:
+    """Follows the agent's replanning loop for one query using the gold intent. None = no replanning needed."""
+    gold = query["gold"]
+    category = get_snapshot_category(gold["category_slug"])
+    if category is None:
+        return None  # a category the catalog doesn't cover: nothing to loosen
+    snapshot = snapshot_store.load_snapshot()
+    brands = snapshot.brands(category)
+    intent = ParsedIntent(
+        category_slug=gold["category_slug"], category_label=category, max_price=gold["max_price"],
+        must_have_attributes=list(gold["must_haves"]), raw_query=query["query"],
+    )
+    kept, _, _ = filter_by_requirements(await search_products(intent.category_slug, intent.max_price), intent.must_have_attributes, brands)
+    if kept:
+        return None
+    row = {"id": query["id"], "type": query["type"], "steps": [], "rescued": False, "options_existed": False}
+    for _ in range(MAX_REPLANS):
+        options = build_options(snapshot.category(category), intent, brands)
+        if not options:
+            break
+        row["options_existed"] = True
+        option = choose_by_rule(options)
+        intent, _ = apply_option(intent, option, category)
+        row["steps"].append({
+            "kind": option.kind, "products_unlocked": option.products_unlocked,
+            "budget_raise_pct": round(100 * (option.new_budget - option.old_budget) / option.old_budget, 1) if option.kind == "raise_budget" else None,
+        })
+        kept, _, _ = filter_by_requirements(await search_products(intent.category_slug, intent.max_price), intent.must_have_attributes, brands)
+        if kept:
+            row["rescued"] = True
+            row["products_returned"] = len(kept)
+            break
+    return row
+
+
+def summarize_replanning(rows: list[dict], total_queries: int) -> dict:
+    rescued = [r for r in rows if r["rescued"]]
+    steps = [s for r in rows for s in r["steps"]]
+    raises = [s["budget_raise_pct"] for s in steps if s["kind"] == "raise_budget"]
+    return {
+        "queries_checked": total_queries,
+        "needed_replanning": len(rows),
+        "had_at_least_one_option": sum(1 for r in rows if r["options_existed"]),
+        "rescued": len(rescued),
+        "rescued_pct_of_needed": pct(len(rescued), len(rows)),
+        "not_rescued_ids": [r["id"] for r in rows if not r["rescued"]],
+        "steps_by_kind": dict(Counter(s["kind"] for s in steps)),
+        "rescued_in_one_step": sum(1 for r in rescued if len(r["steps"]) == 1),
+        "budget_raise_pct_median": round(statistics.median(raises), 1) if raises else None,
+        "budget_raise_pct_max": max(raises) if raises else None,
+        "by_type": {t: {"needed": sum(1 for r in rows if r["type"] == t), "rescued": sum(1 for r in rescued if r["type"] == t)}
+                    for t in sorted({r["type"] for r in rows})},
+        "note": "Offline: the fixed rule makes the pick. Which option the language model picks is measured by live_eval --set replan.",
+    }
+
+
+async def _replan_all() -> dict:
+    out = {}
+    for name in ("core", "replan"):
+        queries = load_queries(name)
+        rows = [r for r in [await replan_one(q) for q in queries] if r is not None]
+        out[name] = summarize_replanning(rows, len(queries))
+    return out
+
+
 def main() -> None:
     import os
 
@@ -298,6 +372,7 @@ def main() -> None:
         "B_extraction": extraction_check(snapshot),
         "C_queries": summarize_queries(rows),
         "D_verifier_faults": fault_test(snapshot),
+        "E_replanning": asyncio.run(_replan_all()),
     }
     RESULTS_DIR.mkdir(exist_ok=True)
     (RESULTS_DIR / "offline_results.json").write_text(json.dumps(results, indent=1, ensure_ascii=False), encoding="utf-8")
@@ -328,6 +403,11 @@ def print_report(r: dict) -> None:
         print(f"  {name:<52} {v['caught']:>5}/{v['injected']:<5} {v['caught_pct']}%")
     for example, n in d["false_reject_examples"]:
         print(f"  wrongly rejected x{n}: {example}")
+    print("\nE. REPLANNING (gold intent; the fixed rule's pick)")
+    for name, e in r["E_replanning"].items():
+        print(f"  {name} set: {e['needed_replanning']} of {e['queries_checked']} queries needed replanning; rescued {e['rescued']} "
+              f"({e['rescued_pct_of_needed']}%), in one step {e['rescued_in_one_step']}; steps {e['steps_by_kind']}; "
+              f"budget raise median {e['budget_raise_pct_median']}% max {e['budget_raise_pct_max']}%; not rescued: {e['not_rescued_ids']}")
 
 
 if __name__ == "__main__":
