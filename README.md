@@ -1,79 +1,115 @@
-# ShopMate AI — Setup Guide (Phases 0 & 1)
+# ShopMate AI
 
-This covers getting the full stack running: database (Supabase), backend (FastAPI), and frontend (React + Vite).
+An agentic shopping assistant for the Indian market. You describe what you want ("wireless earbuds under ₹2,000 with a good mic"); the agent plans, searches real listings, checks each requirement against what the listing actually says, ranks the results, explains every recommendation with claims that are checked against the data, and, if you decide to buy, issues a signed mock "cart mandate" after your explicit consent.
+
+Stack: FastAPI + LangGraph + Groq (`openai/gpt-oss-120b`) on the backend, React + Vite on the frontend, Postgres (Supabase) for the mandate audit log.
+
+What makes it agentic (in plain words):
+- **Plans:** the model turns your request into a category, a budget and must-haves, or asks one question if it can't tell what you want.
+- **Uses tools:** product search, requirement checking and ranking are tools whose calls are logged with IDs.
+- **Replans:** if nothing meets everything, the agent finds the smallest change that brings real products back (raise the budget a little, or drop one requirement; never a brand you named), searches again, and tells you what it gave up.
+- **Checks itself:** every sentence of explanation is a claim that a plain-Python verifier checks against the listing data; failed claims get one rewrite, then are dropped.
+- **Asks before acting:** a purchase needs a signed mandate that you approve; the server re-checks the price.
+
+More detail: `ARCHITECTURE.md` (how it fits together), `IMPLEMENTATION_PLAN.md` (what is built, what is not), `QA_PREP.md` (questions judges may ask).
 
 ---
 
-## 1. Database (Supabase)
+## 1. Prerequisites (one-time)
 
-1. Create a free project at https://supabase.com (New Project -> set name, password, region -> wait for it to provision).
-2. In the Supabase dashboard: click the green **Connect** button (top right) -> **URI** tab. Copy the connection string, replacing `[YOUR-PASSWORD]` with your actual database password.
-3. No local install or Docker needed — this database runs in the cloud, so an internet connection is required to reach it.
+- **Python 3.11 or 3.12** (check with `python --version`). Python 3.13+ may fail to install `psycopg2-binary`; use 3.12 if it does.
+- **Node.js 18+** (check with `node --version`).
+- A free **Groq API key** (https://console.groq.com). The free tier allows 200,000 tokens per day.
+- A free **Supabase** project if you want the database health check and the mandate audit log in Postgres (optional: without it, mandates are stored in a local file).
 
-## 2. Install prerequisites (one-time)
-
-- **Python 3.11+** — check with `python --version`.
-- **Node.js 18+** — check with `node --version`.
-
-## 3. Set up the backend
+## 2. Backend
 
 ```bash
 cd backend
 python -m venv .venv
 ```
 
-Activate the virtual environment:
+Activate it:
 - **Windows (Git Bash):** `source .venv/Scripts/activate`
-- **macOS:** `source .venv/bin/activate`
+- **macOS / Linux:** `source .venv/bin/activate`
 
-Install dependencies and set up your environment file:
 ```bash
 pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Open `.env` and paste in your real Supabase connection string from Step 1.
+Open `.env` and fill in at least `GROQ_API_KEY` and `MANDATE_SECRET`. Add `DATABASE_URL` if you use Supabase.
+
+### Product data (private, not in the repo)
+
+Search runs on a saved snapshot of Flipkart listings (480 products in five categories, captured 8 Oct 2026). Flipkart's terms do not allow republishing listings, so the files are **not** in git. Put these five files in `backend/data_private/` (or point `SNAPSHOT_DIR` at their folder):
+
+`earphones.json`, `smartphones.json`, `laptops.json`, `running_shoes.json`, `smartwatches.json`
+
+Check that they load:
+```bash
+python -m scripts.check_snapshot
+```
 
 Run the backend:
 ```bash
 uvicorn app.main:app --reload
 ```
+You should see `Uvicorn running on http://127.0.0.1:8000`. Interactive API docs are at http://127.0.0.1:8000/docs.
 
-Leave this terminal running. You should see `Uvicorn running on http://127.0.0.1:8000`.
+## 3. Frontend
 
-## 4. Set up the frontend
-
-Open a **new** terminal (leave the backend one running):
-
+In a **new** terminal:
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+Open **http://localhost:5173**. The frontend calls the backend at `http://localhost:8000` (change it with `VITE_API_URL` in `frontend/.env`).
 
-You should see `Local: http://localhost:5173/`.
+## 4. Try it
 
-## 5. Test it
+Type one of these:
 
-Open **http://localhost:5173**. You should see:
+| Request | What you should see |
+|---|---|
+| Wireless earphones under ₹1500 | Three ranked products, each with checked claims and a "verified" banner |
+| Phone with 12GB RAM under ₹9,000 | A "Changed to find matches" note: nothing matched everything, so it says exactly what was changed |
+| Something nice for my brother's birthday | One clarifying question instead of a guess |
+| Press "Select this" on a product | The cart-mandate screen: review, consent, approve, mock checkout, audit log |
 
-- Backend (FastAPI) status: **ok**
-- Database (Postgres/Supabase) status: **ok**
-- Products (FakeStoreAPI, normalized) status: **ok (20 products loaded)**, followed by a grid of sample products.
+## 5. Tests and evaluation
 
-### Troubleshooting
+```bash
+cd backend
+python -m pytest tests -q                  # automated tests; no internet or keys needed
+python -m evaluation.offline_eval          # offline evaluation on the snapshot; no keys, no tokens
+python -m evaluation.live_eval             # live evaluation with Groq (uses tokens; resumable)
+python -m evaluation.live_eval --baseline  # the same model with no tools or data (comparison)
+python -m evaluation.live_eval --set replan  # replanning / clarifying-question stress set (21 queries)
+python -m evaluation.live_eval --rescore   # recompute a summary from saved runs, no model calls
+```
+
+The live evaluation saves every finished query and stops cleanly when Groq's daily token limit is reached; run the same command again after the limit resets and it continues. Aggregate results are in `backend/evaluation/results/` (safe to share); per-product files stay in `backend/data_private/eval/` (private).
+
+## 6. Environment settings (`backend/.env`)
+
+| Setting | Meaning |
+|---|---|
+| `GROQ_API_KEY`, `GROQ_MODEL` | The language model (default `openai/gpt-oss-120b`) |
+| `DATA_SOURCE` | `snapshot` (default) or `fakestore` (old toy catalog) |
+| `SNAPSHOT_DIR` | Folder with the five snapshot files (default `backend/data_private`) |
+| `SERPAPI_ENABLED`, `SERPAPI_KEY` | Optional web-search fallback; off by default |
+| `MANDATE_SECRET`, `MANDATE_TTL_MINUTES` | Signing secret and lifetime for cart mandates |
+| `DATABASE_URL`, `MANDATE_DB_URL` | Postgres for the health check and mandate audit log (falls back to a local file) |
+
+## Troubleshooting
 
 | Symptom | Likely cause |
 |---|---|
-| Backend status: "unreachable" | The `uvicorn` terminal isn't running, or crashed — check that terminal for errors. |
-| DB status: "DATABASE_URL not set in .env" | `.env` is missing, or you're running `uvicorn` from the wrong folder (must be `backend/`). |
-| DB status: connection error / timeout | Check your internet connection, and double check you replaced `[YOUR-PASSWORD]` in the connection string with your real password. |
-| DB status: "password authentication failed" | Your Supabase database password is wrong in `.env` — re-copy the connection string from the Supabase dashboard. |
-| Products status: error | FakeStoreAPI may be temporarily down, or you're offline — this is an external public API with no login required. |
-| Port 8000/5173 already in use | Something else on your machine is using that port — close it, or ask for help changing the port. |
-
----
-
-## What's next (Phase 2)
-
-Wiring up Groq for natural-language intent parsing — turning a shopping request like "noise-cancelling headphones under ₹8000" into structured intent. No agent/tools yet, just prompt → structured JSON.
+| Frontend shows "unreachable" | The `uvicorn` terminal isn't running, or crashed; read its output |
+| `GROQ_API_KEY` errors, or a 429 "rate limit" message | Key missing, or the free daily token limit is used up; wait for the reset |
+| "No snapshot found" | The five JSON files are not in `backend/data_private/` (or `SNAPSHOT_DIR`) |
+| `pip install` fails on `psycopg2-binary` | Use Python 3.12, or install a newer `psycopg2-binary` |
+| Port 8000 / 5173 already in use | Close the other program using it |
+| After pulling, your old `venv/` folder disappeared | The venv used to be committed by mistake; recreate it with the steps in section 2 |

@@ -58,9 +58,16 @@ const post = (path, payload) =>
  * Ask the shopping agent. Returns { aisle, parsedIntent, trace, products, relaxations, clarification, ... }
  * allowClarification: false when `query` already contains the answer to the agent's question,
  * so the agent searches instead of asking again.
+ * demoTamper: true makes the agent deliberately corrupt ONE claim so the checker can be seen rejecting it.
  */
-export const sendChat = (query, { allowClarification = true } = {}) =>
-  post('/chat', { query, allow_clarification: allowClarification })
+export const sendChat = (query, { allowClarification = true, demoTamper = false } = {}) =>
+  post('/chat', { query, allow_clarification: allowClarification, demo_tamper: demoTamper })
+
+/**
+ * Compare two products from the current results. Returns { category, a, b, rows, summary, aWins, bWins, ties }.
+ * Built on the server from the listings' own checked facts; no language model is involved.
+ */
+export const compareProducts = (idA, idB) => post('/compare', { product_ids: [idA, idB] })
 
 /** Mock Cart Mandate (Phase 7). Each returns { mandate, events, storage }. */
 export const createMandate = (productId, quantity = 1) => post('/mandates', { product_id: productId, quantity })

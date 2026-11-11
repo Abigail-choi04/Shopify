@@ -7,10 +7,15 @@
  * category-adaptive comparison table.
  *
  * Products found through the web fallback ("serpapi-...") have a link only:
- * the server cannot re-check their price, so they cannot go into a mock cart.
+ * the server cannot re-check their price, so they cannot go into a mock cart
+ * or be compared (they have no checked specs).
+ *
+ * Tick "Compare" on any two cards and press the button to see them side by side
+ * (CompareModal, built on the server from the listings' own facts).
  */
 
 import { useState } from 'react'
+import CompareModal from './CompareModal'
 
 const REQUIREMENT_LABELS = {
   met: { icon: '✓', className: 'req--met' },
@@ -72,6 +77,16 @@ function VerificationBanner({ verification }) {
 
 function ProductRecommendations({ result, onSelectProduct }) {
   const { products, comparisonAttributes, verification } = result
+  const [compareIds, setCompareIds] = useState([])
+  const [comparing, setComparing] = useState(false)
+
+  // At most two products can be ticked; ticking a third replaces the oldest tick.
+  const toggleCompare = (productId) => {
+    setCompareIds((current) => {
+      if (current.includes(productId)) return current.filter((id) => id !== productId)
+      return [...current, productId].slice(-2)
+    })
+  }
 
   if (products.length === 0) {
     return (
@@ -89,6 +104,15 @@ function ProductRecommendations({ result, onSelectProduct }) {
     <div className="recommendations">
       <h2 className="section-label">Recommendations</h2>
       <VerificationBanner verification={verification} />
+
+      {products.filter((p) => !p.id.startsWith('serpapi-')).length >= 2 && (
+        <div className="compare-bar">
+          <span>Tick “Compare” on two products to see them side by side.</span>
+          <button className="compare-bar__btn" disabled={compareIds.length !== 2} onClick={() => setComparing(true)}>
+            Compare selected ({compareIds.length}/2)
+          </button>
+        </div>
+      )}
 
       <div className="product-grid">
         {products.map((product) => {
@@ -138,6 +162,12 @@ function ProductRecommendations({ result, onSelectProduct }) {
                   View listing ↗
                 </a>
               )}
+              {canBuy && products.length >= 2 && (
+                <label className="product-card__compare">
+                  <input type="checkbox" checked={compareIds.includes(product.id)} onChange={() => toggleCompare(product.id)} />
+                  Compare
+                </label>
+              )}
               {canBuy ? (
                 <button className="product-card__select-btn" onClick={() => onSelectProduct(product)}>
                   Select this
@@ -149,6 +179,10 @@ function ProductRecommendations({ result, onSelectProduct }) {
           )
         })}
       </div>
+
+      {comparing && compareIds.length === 2 && (
+        <CompareModal idA={compareIds[0]} idB={compareIds[1]} onClose={() => setComparing(false)} />
+      )}
 
       <h3 className="comparison-heading">Side-by-side comparison</h3>
       <div className="comparison-table-wrap">

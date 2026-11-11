@@ -11,8 +11,9 @@ Phase 5 additions are all OPTIONAL / additive (`claims` on a product,
 `verification` on the response), so the existing frontend keeps working
 unchanged and can start showing them whenever we choose. The same goes
 for the Phase 4 additions (`requirements`, `url`, `source`, ... on a
-product, `dataSource` on the response), and for the replanning and
-clarifying-question additions (`relaxations`, `clarification`).
+product, `dataSource` on the response), and for the replanning,
+clarifying-question and verifier-demo additions (`relaxations`,
+`clarification`, `demoTamper`).
 """
 
 from typing import Optional, Union
@@ -116,6 +117,17 @@ class RelaxationOut(BaseModel):
     productsUnlocked: int = 0
 
 
+class DemoTamperOut(BaseModel):
+    """Verifier demo: the one claim that was deliberately made wrong, and what the checker did about it."""
+
+    productTitle: str
+    originalText: str  # what the model wrote
+    alteredText: str  # what the checker was shown instead
+    caught: bool  # True when the checker rejected it (it always should)
+    verdict: Optional[str] = None  # the checker's reason, in plain English
+    rewritten: bool = False  # True when the model was asked to rewrite its claims
+
+
 class ParsedIntentOut(BaseModel):
     category: str
     budget: str
@@ -134,6 +146,8 @@ class ChatResponse(BaseModel):
     relaxations: list[RelaxationOut] = []
     # Clarifying questions: when set, the agent is asking this instead of answering (products is empty).
     clarification: Optional[str] = None
+    # Verifier demo: set only when the shopper asked to see the checker catch a deliberately wrong claim.
+    demoTamper: Optional[DemoTamperOut] = None
 
 
 class ChatRequest(BaseModel):
@@ -141,3 +155,5 @@ class ChatRequest(BaseModel):
     # False when the query already contains the shopper's answer to a clarifying question,
     # so the agent never asks twice in a row.
     allow_clarification: bool = True
+    # True = deliberately corrupt ONE claim in the first draft so the checker can be seen rejecting it (demo only).
+    demo_tamper: bool = False

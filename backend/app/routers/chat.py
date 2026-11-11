@@ -35,7 +35,8 @@ async def chat(request: ChatRequest):
         raise HTTPException(status_code=400, detail="Query cannot be empty.")
 
     try:
-        return await run_agent(request.query, allow_clarification=request.allow_clarification)
+        options = {"demo_tamper": True} if request.demo_tamper else {}  # demo flag only passed when asked for
+        return await run_agent(request.query, allow_clarification=request.allow_clarification, **options)
     except RuntimeError as e:
         # Raised by groq_client if GROQ_API_KEY is missing — surface it
         # clearly instead of a generic 500.

@@ -2,11 +2,14 @@ import { useState, useRef } from 'react'
 import './App.css'
 import './extras.css'
 import './agent-notes.css'
+import './features.css'
 import { sendChat } from './api'
 import { EXAMPLE_QUERIES } from './data/examples'
 import ReasoningTrace from './components/ReasoningTrace'
 import ProductRecommendations from './components/ProductRecommendations'
 import CartMandateModal from './components/CartMandateModal'
+import ChangeComparison from './components/ChangeComparison'
+import VerifierDemoPanel from './components/VerifierDemoPanel'
 
 // Delay between revealing each trace step once the answer has arrived.
 // The agent's work is already finished by then; this just makes it readable.
@@ -22,6 +25,8 @@ function App() {
   // Clarifying questions: the request the agent asked about, and the shopper's reply being typed.
   const [askedQuery, setAskedQuery] = useState('')
   const [clarifyAnswer, setClarifyAnswer] = useState('')
+  // Demo: deliberately corrupt one claim so the checker can be seen rejecting it (costs one extra model call).
+  const [demoTamper, setDemoTamper] = useState(false)
   const timeoutsRef = useRef([])
   const runIdRef = useRef(0)
   const lastRequestRef = useRef({ text: '', allowClarification: true }) // what "Try again" re-sends
@@ -68,7 +73,7 @@ function App() {
     setClarifyAnswer('')
 
     try {
-      const data = await sendChat(text, { allowClarification })
+      const data = await sendChat(text, { allowClarification, demoTamper })
       if (runIdRef.current !== runId) return // a newer search replaced this one
       setAskedQuery(data.clarification ? text : '')
       setResult(data)
@@ -141,6 +146,11 @@ function App() {
           {busy ? 'Working...' : 'Find It'}
         </button>
       </form>
+
+      <label className="demo-toggle">
+        <input type="checkbox" checked={demoTamper} onChange={(e) => setDemoTamper(e.target.checked)} disabled={busy} />
+        Demo: plant one wrong claim to show the checker catching it (uses one extra model call)
+      </label>
 
       {stage === 'idle' && (
         <div className="example-queries">
@@ -232,23 +242,8 @@ function App() {
 
           {stage === 'results' && !result.clarification && (
             <>
-              {result.relaxations && result.relaxations.length > 0 && (
-                <div className="relax-note" role="note">
-                  <span className="relax-note__title">Changed to find matches</span>
-                  <ul className="relax-note__list">
-                    {result.relaxations.map((relaxation, index) => (
-                      <li key={index}>
-                        {relaxation.message}
-                        <span className="relax-note__who">
-                          {relaxation.chosenBy === 'model'
-                            ? 'Chosen by the agent from the options the catalog allowed'
-                            : 'Chosen by the fixed fallback rule'}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              <ChangeComparison parsedIntent={result.parsedIntent} relaxations={result.relaxations} />
+              <VerifierDemoPanel demo={result.demoTamper} />
               <ProductRecommendations result={result} onSelectProduct={setSelectedProduct} />
             </>
           )}

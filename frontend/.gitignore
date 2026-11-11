@@ -1,24 +1,22 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# --- Backend (Python) ---
+backend/.venv/
+backend/venv/
+venv/
+backend/__pycache__/
+backend/**/__pycache__/
+__pycache__/
+*.pyc
+backend/.pytest_cache/
+backend/.env
 
-node_modules
-dist
-dist-ssr
-*.local
+# --- Private data (Flipkart snapshot, SerpAPI cache, evaluation labels) — never commit ---
+backend/data_private/
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# --- Frontend (Node) ---
+frontend/node_modules/
+frontend/dist/
+
+# --- OS / Editor ---
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+.vscode/
+*.log

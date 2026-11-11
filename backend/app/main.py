@@ -6,6 +6,7 @@ Phase 1: adds the /products router (FakeStoreAPI-backed, normalized).
 Phase 3: adds the /chat router (LangGraph agent, with Phase 2's Groq
 intent parsing collapsed into the planner node).
 Phase 7: adds the /mandates router (mock Cart Mandate: approve, sign, mock checkout).
+Extra: adds the /compare router (side-by-side comparison of two products, no model involved).
 """
 
 import os
@@ -15,7 +16,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, text
 
-from app.routers import chat, mandates, products
+from app.routers import chat, compare, mandates, products
 
 load_dotenv()
 
@@ -34,6 +35,7 @@ app.add_middleware(
 app.include_router(products.router)
 app.include_router(chat.router)
 app.include_router(mandates.router)
+app.include_router(compare.router)
 
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 

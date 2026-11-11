@@ -1,273 +1,165 @@
-# ShopMate AI — Architecture & Tech Choices
+# ShopMate AI — Architecture and Technology Choices
 
-This document explains what's actually being built, how the pieces fit
-together, and why each technology was picked over its alternatives.
-It's written to double as material for your conference paper's
-system-design section.
+How the system fits together and why each technology was chosen. It also serves as material for the paper's system-design section. Everything here describes what is built; what is not built is listed in section 9.
 
 ---
 
-## 1. System Overview
+## 1. System overview
 
-ShopMate AI is an agentic shopping assistant. The user states a need
-in natural language ("noise-cancelling headphones under ₹8,000"); the
-system plans, searches across product data, compares options against
-category-specific attributes, and returns ranked, justified
-recommendations with a visible reasoning trace. A mocked "Cart
-Mandate" step captures purchase intent without any real payment
-processing.
+The shopper types a need in plain language ("noise-cancelling earbuds under ₹3,000"). The agent plans, searches real listings, checks each requirement against what the listing states, ranks the candidates, explains each recommendation as checkable claims, verifies those claims, and returns ranked results with a visible reasoning trace. If the shopper chooses a product, a signed mock "cart mandate" captures consent; no real payment exists.
 
-The defining research question isn't "can an LLM recommend a
-product" — it's **whether an agent can reliably plan, use tools, stay
-grounded in real data (not hallucinate specs/prices), and adapt its
-reasoning to categories it wasn't specifically programmed for.**
-That's the agentic contribution: multi-step planning + tool use +
-grounding + transparent reasoning, not a single prompt-to-answer call.
+The research question is not "can an LLM recommend a product". It is **whether an agent can plan, use tools, replan when it fails, and stay grounded in real data, so that the model never decides what is true.** The model plans and phrases; deterministic code decides facts, checks claims and gates actions.
 
 ```
-┌─────────────┐      ┌──────────────┐      ┌───────────────────┐
-│   Frontend   │◄────►│   Backend    │◄────►│   Agent Layer      │
-│ React+Vite   │ HTTP │  FastAPI     │      │  LangGraph         │
-│ (chat UI,    │      │ (orchestrator,│      │  Planner→Search→   │
-│  trace view, │      │  API routes) │      │  Rank→Verify→      │
-│  cart modal) │      │              │      │  Respond            │
-└─────────────┘      └──────┬───────┘      └─────────┬──────────┘
-                             │                         │
-                    ┌────────▼────────┐      ┌─────────▼──────────┐
-                    │   Supabase       │      │   Product Sources  │
-                    │  (Postgres) —    │      │  FakeStoreAPI       │
-                    │  session memory, │      │  (fallback, Phase1) │
-                    │  V2 preferences  │      │  RapidAPI / MYSTORE │
-                    └──────────────────┘      │  (real data, Phase4)│
-                                               └────────────────────┘
+┌────────────┐  HTTP  ┌───────────────┐      ┌────────────────────────────────┐
+│  Frontend   │◄──────►│   Backend      │◄────►│  Agent (LangGraph)              │
+│ React+Vite  │        │   FastAPI      │      │  planner → search → rank →      │
+│ chat, trace,│        │ /chat          │      │  explain → verify → respond     │
+│ cart modal  │        │ /mandates      │      │  + clarify and replan branches  │
+└────────────┘        │ /products      │      └───────────────┬────────────────┘
+                       └───────┬───────┘                      │
+                               │                  ┌───────────▼────────────────┐
+                      ┌────────▼───────┐          │  Product data                │
+                      │ Postgres        │          │  Flipkart snapshot (private) │
+                      │ (Supabase):     │          │  SerpAPI web fallback (off)  │
+                      │ mandate audit   │          │  FakeStoreAPI toy catalog    │
+                      └────────────────┘          └─────────────────────────────┘
 ```
 
 ---
 
-## 2. Layer-by-Layer Breakdown
+## 2. The agent graph
 
-### 2.1 Frontend — React + Vite
+```
+              (request names no kind of product)
+ planner ─────────────────────────────────────────► clarify ─► END
+    │
+    ▼
+ search ──(nothing meets every requirement)──► replan
+    ▲                                            │
+    └────────────(search again, loosened)────────┘
+    │
+    ▼
+  rank ─► explain ─► verify ──(all good, or retry used up)──► respond
+              ▲         │
+              └─────────┘  (some claims failed: one rewrite allowed)
+```
 
-**What it does**: chat-style input, renders the reasoning trace as it
-streams in, shows ranked product cards + a comparison table, and the
-mock Cart Mandate confirmation modal.
-
-**Why React + Vite over Next.js**: Next.js's main advantages are
-server-side rendering (SSR) and a built-in API layer — neither is
-needed here since FastAPI already serves as the backend and there's
-no SEO requirement (this isn't a public marketing site). Vite gives a
-faster local dev loop (near-instant hot reload) and a simpler mental
-model for a single-page chat interface. Next.js remains a reasonable
-alternative if one-click hosting (Vercel) becomes a priority later.
-
-### 2.2 Backend — FastAPI
-
-**What it does**: the orchestrator. Exposes REST endpoints, owns the
-product-normalization layer, and (from Phase 3 onward) hosts the
-LangGraph agent that the frontend talks to.
-
-**Why FastAPI over Flask/Django/Express**:
-- Native `async`/`await` — matters here because most of the work
-  (calling Groq, calling product APIs) is I/O-bound, and FastAPI's
-  async support lets the server handle multiple concurrent tool calls
-  efficiently.
-- Automatic request/response validation and OpenAPI docs via Pydantic
-  — every API contract (`Product`, later `Intent`, `Recommendation`)
-  is declared once and validated automatically, which reduces silent
-  data-shape bugs and gives free interactive API docs at `/docs`.
-- Lighter-weight than Django (no ORM/admin/templating baggage this
-  project doesn't need) and better suited to an API-only backend than
-  Express (Python keeps one language across backend + agent layer +
-  data processing, avoiding a JS/Python split).
-
-### 2.3 Data Layer — Product Schema & Normalizers
-
-**What it does**: every product, regardless of source, is converted
-into one shared `Product` shape (`id`, `source`, `title`, `category`,
-`price`, `rating`, `raw`, etc.) before anything downstream touches it.
-
-**Why this matters architecturally**: this is what makes the
-category-adaptive ranking agent (Phase 3) source-agnostic. The
-ranking logic never needs to know whether a product came from
-FakeStoreAPI or RapidAPI — it only ever sees a `Product`. Adding a
-new data source later means writing one new client file + one new
-normalizer file, with zero changes to ranking, search, or the
-frontend. This pattern (client → normalizer → shared schema) is the
-same one production aggregators use internally, so it's also a
-legitimate design decision to defend to reviewers, not just
-convenient plumbing.
-
-The `raw` field on every normalized product is kept for traceability
-— Phase 5's grounding mechanism needs to point back to real source
-data for any claim the agent makes.
-
-### 2.4 Database — Supabase (hosted Postgres)
-
-**What it stores**: session memory for V2 (budget, preferences,
-rejected items across turns — Phase 6), and later a product cache if
-API rate limits demand it.
-
-**Why Supabase over local Postgres/Docker**: no local database
-install or container runtime needed — one less thing to break across
-different machines (this project has already been moved between two
-laptops). Supabase is standard Postgres underneath, so nothing about
-the schema, queries, or SQLAlchemy usage changes versus a local
-instance — it's a deployment choice, not an architectural one. The
-free tier is sufficient for a hackathon/class project's session-scale
-data.
-
-**Why Postgres over a vector database for this use case**: the
-project doc lists a vector store as optional, and it's being skipped
-entirely. Category-adaptive ranking works on structured attributes
-(price, rating, category-specific specs) that a normal SQL/relational
-model captures cleanly — there's no semantic-similarity search
-requirement (e.g. "find me something like this but cheaper" via
-embeddings) in the current scope. Adding a vector store would be
-solving a problem this project doesn't have yet.
-
-### 2.5 LLM Provider — Groq
-
-**What it does**: powers intent parsing (Phase 2) and the agent's
-tool-calling decisions (Phase 3+).
-
-**Why Groq over alternatives**:
-| Provider | Strength | Trade-off |
+| Node | Who does the work | What it does |
 |---|---|---|
-| **Groq** (chosen) | Very low inference latency (LPU hardware), generous free tier, OpenAI-compatible API (easy to swap later) | Smaller model catalog than OpenAI/Anthropic directly |
-| Cerebras | Even faster raw throughput | Thinner ecosystem/tooling, less mature function-calling support at eval time |
-| Fireworks AI | Strong structured-output/function-calling serving | Less aggressive free tier for a student project |
+| planner | Language model | Turns the request into a category, budget and must-haves (a `ParsedIntent`); writes one question if no product type is named |
+| clarify | Code | Returns the planner's question instead of guessing; never asks twice |
+| search | Code | Searches the snapshot by category and budget, checks every must-have against the listing, removes only products the listing clearly contradicts |
+| replan | Code builds options, model picks, code checks the pick | When nothing is left: works out every single change that brings real products back, the model chooses one, a fixed rule decides if the choice is unusable; search runs again (at most twice) |
+| rank | Code | Review-weighted rating, requirement matches and price |
+| explain | Language model | Writes each product's reasoning as separate claims, each citing the tool call it came from |
+| verify | Code | Checks every claim against the real product data; one rewrite allowed; failures are dropped |
+| respond | Code | Assembles the answer from verified claims only |
 
-Groq's speed matters specifically because a multi-step agent (planner
-→ search → rank → verify → respond) makes several sequential LLM
-calls per user query — latency compounds across steps in a way it
-doesn't in a single-shot chatbot, so inference speed is a first-order
-UX concern here, not a nice-to-have. Using an OpenAI-compatible
-interface means swapping providers later (if Groq's free tier becomes
-a constraint) is a config change, not a rewrite.
+Every tool call gets a short ID (`call_001`, ...) recorded in the trace. Claims must cite one, and the verifier enforces it.
 
-### 2.6 Agent Orchestration — LangGraph (Phase 3+)
+**Why a fixed graph and not open-ended autonomy:** the shape is fixed on purpose, so the trace is inspectable and behaviour is reliable. The autonomy is inside the graph: the planner decides what the request means, the replanner decides which requirement to give up, and the choices differ per request. This is a constrained agent, a common and defensible pattern.
 
-**What it does**: implements the actual agentic loop as an explicit
-graph: Planner node → Search/tool-use node → Comparison/ranking node
-→ Verifier/critic node → Response node.
+---
 
-**Why LangGraph over a hand-rolled loop**: a hand-rolled `while` loop
-calling the LLM repeatedly would work for a graph this small, and has
-less dependency overhead. LangGraph is chosen instead because (a) it
-gives explicit, inspectable state at each node — which directly
-produces the reasoning-trace UI requirement — rather than needing to
-build that instrumentation by hand, and (b) it's a recognized
-"real" agent framework, which matters for a project whose grading
-criteria explicitly ask for demonstrated agentic concepts (planning,
-tool use, feedback-driven execution) — using established
-infrastructure is easier to defend in a paper/demo than a bespoke
-loop that does the same thing less legibly.
+## 3. Layers
 
-### 2.7 Product Data Sources
+### 3.1 Frontend: React + Vite
+Chat input, the reasoning trace, ranked product cards with requirement chips and a verification banner, a "Changed to find matches" note when replanning loosened something, a clarifying-question box, and the cart-mandate modal (draft, consent, approve, mock checkout, countdown, audit log). Vite was chosen over Next.js because FastAPI is already the API layer and there is no need for server-side rendering.
 
-| Source | Role | Why |
+### 3.2 Backend: FastAPI
+Routes: `POST /chat` (the agent), `/mandates` (create, approve, checkout, cancel, get), `/products`, `/health`, `/health/db`. FastAPI's async support suits the I/O-bound work (model calls), and Pydantic validates every request and response shape.
+
+### 3.3 Language model: Groq, `openai/gpt-oss-120b`
+Used for three jobs only: planning the request, choosing a relaxation among options the code offers, and phrasing claims. The API is OpenAI-compatible, so changing provider is a settings change. The free tier allows 200,000 tokens per day, which is why the live evaluation is resumable.
+
+### 3.4 Agent orchestration: LangGraph
+Gives explicit state at each node, which is what produces the trace, and conditional edges for the clarify and replan branches.
+
+### 3.5 Product data
+- **Flipkart snapshot (main source).** 480 listings (82 earphones, 100 smartphones, 98 laptops, 100 running shoes, 100 smartwatches) captured on 8 October 2026 with a third-party scraping service. Flipkart's terms do not allow republishing listings, so the files live in `backend/data_private/` and are git-ignored. Every answer states the capture date.
+- **SerpAPI (optional fallback).** Adds Google Shopping results when too few products remain. Off unless switched on; results are link-only and cannot be put into a mandate because the server cannot re-check their price.
+- **FakeStoreAPI (toy catalog).** The original Phase 1 source, used only if the snapshot is missing or `DATA_SOURCE=fakestore`.
+
+All sources pass through a client and a normalizer into one shared `Product` shape, so ranking and the frontend never know where a product came from.
+
+### 3.6 Typed spec facts and requirement matching
+Listing specifications are extracted into typed facts (for example RAM 8 GB, noise cancellation yes). A fact exists only if the listing states it clearly; a contradictory listing yields no fact (it is recorded as a conflict) and silence means "unknown". Each requirement is matched into one of five outcomes:
+
+| Outcome | Meaning | Effect |
 |---|---|---|
-| **FakeStoreAPI** (Phase 1) | Always-on fallback / demo backbone | Zero API key, zero quota, zero cost — guarantees the demo never breaks on stage regardless of what happens to third-party quotas |
-| **RapidAPI Real-Time Product Search** (Phase 4) | Real cross-retailer data (Amazon/Walmart/eBay/Best Buy/Target via Google Shopping aggregation) | Free tier capped at 100 req/month — treated as a demo-day-only, flag-gated source, not used during normal development |
-| **MYSTORE API** (Phase 4) | India-relevant retail data (Flipkart-sourced) | Free, regionally relevant given the project's ₹-denominated use cases |
-| **SerpAPI** (fallback) | Search-grounding fallback | 250 searches/month free tier, backup if the above sources fail |
+| met | The listing says it does | Counts toward ranking |
+| not met | The listing clearly says it does not | Product is removed |
+| unknown | The listing is silent | Product stays, flagged "couldn't confirm" |
+| conflict | The listing contradicts itself | Product stays, flagged |
+| unsupported | The system has no rule for this requirement | Product stays, flagged |
 
-The tiered design — FakeStoreAPI always on, real sources layered on
-top with graceful degradation — means a quota exhaustion or an
-outage during a live demo degrades to "still works, just simulated
-data" rather than a visible failure.
+Only "not met" removes a product, so missing information is never treated as failure. Ranking: score = 2 × Bayesian-weighted rating + 1 per confirmed requirement − scaled price; variants of one model (colour, storage) are grouped so the top three are three different models.
 
-### 2.8 Transparent Reasoning (Phase 5)
+### 3.7 Replanning
+When no product meets everything, `app/agent/replan.py` builds every single change that would bring real products back: raise the budget to the cheapest price at which every requirement is met (offered only if within 50% of the shopper's budget), or keep the budget and drop one requirement. **A brand the shopper named is never dropped, and the category never changes.** The model picks one option; code checks the pick and falls back to a fixed rule (a small raise of up to 20% first, otherwise the drop that brings back the most products) if the reply is unusable. The answer tells the shopper exactly what was given up, and "within budget" claims are still checked against the budget the shopper originally gave.
 
-Three mechanisms work together to prevent hallucinated
-recommendations, directly addressing the "how do you stop it from
-making things up" question a reviewer will ask:
+### 3.8 Grounding and verification
+1. **Trace:** every thought, action and observation is recorded and shown.
+2. **Claims with sources:** the explanation is structured claims (field, value, sentence, source tool call). A claim without a valid source is dropped.
+3. **Deterministic verifier:** checks the field, tool-call ID, provenance, value, yes/no wording (negation) and the numbers inside the sentence against the real product. One rewrite, then drop; if the model's output is unusable the answer falls back to data only.
 
-1. **ReAct-style trace logging** — every `Thought → Action(tool_call)
-   → Observation` step is logged, not just the final answer, and
-   rendered as an expandable trace in the UI (this is what the demo
-   prototype's `ReasoningTrace` component already simulates with
-   hardcoded data).
-2. **Grounding via `source_tool_call_id`** — the agent's final answer
-   is structured JSON where every factual claim (a price, a spec, a
-   rating) must carry the ID of the tool call that produced it.
-   Claims without one are dropped before rendering, rather than shown
-   with a caveat — the enforcement is structural, not a disclaimer.
-3. **Verifier/critic pass** — a second, cheaper LLM call (or
-   rule-based check) compares the draft answer against raw tool
-   outputs before it reaches the user, flagging unverifiable claims
-   instead of guessing at them.
+The verifier is plain Python, so it is testable: a fault-injection test corrupts claims in 16 known ways and measures how many are caught.
 
-### 2.9 Mock Cart Mandate (Phase 7)
+### 3.9 Mock cart mandate (modelled on the AP2 pattern)
+The server drafts the mandate with its own price (the browser's price is ignored), quantity up to 5, and a 15-minute lifetime. Approval needs explicit consent and re-checks the price. The approved cart is signed with HMAC-SHA256 over its canonical fields; checkout re-verifies state, expiry, signature and price. Every step is written to an audit log (Postgres through SQLAlchemy, with a local-file fallback). No payment processor exists or is planned.
 
-No real payment processing exists or is planned — this is explicitly
-out of scope. Instead, the agent generates a JSON object modeled on
-the real-world **AP2** (Agent Payments Protocol) mandate pattern:
-item, price, quantity, timestamp, and explicit user consent, and the
-mock "purchase" only proceeds after the user checks a consent box
-approving that exact object. This is deliberately close to how
-production agentic-commerce protocols work (AP2 for payment
-authorization, ACP for the agent-merchant checkout handshake, UCP for
-catalog/product discovery) without wiring into a real payment
-processor — the point for the paper is demonstrating the *pattern* of
-human-in-the-loop authorization before an agent takes an
-irreversible action, which is a core safety property of agentic
-commerce systems generally, not specific to shopping.
+### 3.10 Database: Supabase (Postgres)
+Holds the mandate audit log and serves the database health check. Standard Postgres, so nothing depends on Supabase specifically. A vector database was left out because ranking works on structured attributes and there is no similarity-search requirement.
 
 ---
 
-## 3. Why This Architecture Supports an Agentic (not just LLM-wrapped) Claim
+## 4. Why this supports an agentic claim
 
-The class project's core requirement is justifying agentic behavior
-over "an LLM feature bolted onto an app." The architecture supports
-that claim concretely:
+- **Planning and decisions:** the planner interprets the request, decides when to ask a question, and the replanner chooses which constraint to loosen.
+- **Tool use:** search, requirement checking and ranking are logged tool calls with IDs.
+- **Reasoning:** the trace is a user-visible product feature, not a debug log.
+- **Feedback-driven execution:** the verifier rejects claims and triggers a rewrite; the replanner reacts to a failed search by changing the plan and searching again.
+- **Acting safely:** purchase intent needs a signed, consented, re-checked mandate.
 
-- **Autonomous decision-making**: the planner node decides *which*
-  tools to call and in what order based on the parsed query — this
-  isn't a fixed pipeline; a footwear query and an electronics query
-  trigger different ranking attributes without hand-written branching
-  per category.
-- **Tool usage**: product search, spec normalization, and ranking are
-  all exposed as callable tools the agent invokes, not inline
-  function calls the developer sequenced.
-- **Reasoning**: the ReAct trace is a first-class, user-visible
-  artifact of the system, not a debug log.
-- **Feedback-driven execution**: the verifier/critic node checks the
-  planner's draft output against ground truth and can reject/flag
-  claims — a feedback loop within a single query, and (in Phase 6)
-  across queries via session memory.
-- **Multi-agent collaboration** (stretch, Phase 9): a second critic
-  agent independent from the primary reasoning chain, evaluating its
-  output.
+Not built: memory across turns and multiple cooperating agents (section 9).
 
 ---
 
-## 4. What's Deliberately Out of Scope
+## 5. Evaluation (what is measured)
 
-- Real payment processing or live checkout automation.
-- Scraping arbitrary e-commerce sites at demo time (data sources are
-  all API/package-based, never ad hoc scraping — avoids fragility on
-  stage).
-- A vector database / semantic search (no current requirement for
-  similarity-based product matching; would add complexity without a
-  corresponding capability need).
-- SSR/Next.js (no public-facing SEO surface to justify it).
+- **Offline (no key, no tokens):** snapshot coverage; extraction vs listing titles; retrieval and ranking on 66 queries using the gold intent; verifier fault injection; replanning rescue rate on the queries that return nothing.
+- **Live (Groq):** planner accuracy against gold intents, first-draft claim failures, rewrites, drops, fallbacks, latency; the replanning and clarifying-question stress set; an LLM-only baseline with no tools or data.
+
+Aggregate results are in `backend/evaluation/results/`.
 
 ---
 
-## 5. Phase-to-Architecture Map
+## 6. Deliberately out of scope
+- Real payments or live checkout.
+- Scraping at demo time (the data is a saved snapshot).
+- A vector database or semantic search.
+- Server-side rendering.
 
-For reference, here's which architectural piece each phase builds:
+## 7. Known limits
+- One snapshot, one retailer, about 100 listings per category, captured during a sale; the data is private.
+- Requirement rules are English-only patterns for five categories.
+- The mandate is a mock for one server: no accounts, real payments or key management.
 
-| Phase | Architecture piece |
-|---|---|
-| 0 | Frontend/backend/DB scaffolding, no logic |
-| 1 | Product schema + FakeStoreAPI normalizer (§2.3, §2.7) |
-| 2 | Groq intent parsing (§2.5) |
-| 3 | LangGraph agent loop (§2.6) |
-| 4 | Real data sources layered on fallback (§2.7) |
-| 5 | Transparent reasoning / grounding (§2.8) |
-| 6 | Supabase-backed session memory (§2.4) |
-| 7 | Mock Cart Mandate (§2.9) |
-| 8 | Frontend polish, demo rehearsal |
-| 9 | Multi-agent critic (stretch) |
+## 8. Phase map
+
+| Phase | Piece | Status |
+|---|---|---|
+| 0 | Scaffolding (frontend, backend, database) | Done |
+| 1 | Product schema and FakeStoreAPI normalizer | Done |
+| 2–3 | Groq planning and the LangGraph agent | Done |
+| 4 | Real data: Flipkart snapshot, typed facts, requirement matching, ranking, SerpAPI fallback | Done |
+| 5 | Grounding and verifier | Done |
+| 6 | Session memory | Not built |
+| 7 | Mock cart mandate (server and approval screen) | Done |
+| 8 | Streaming and frontend polish | Not built |
+| 9 | Multi-agent critic | Not built (stretch) |
+| Extra | Replanning, clarifying questions, evaluation set and scripts | Done |
+
+## 9. Not built yet
+Session memory across turns (Phase 6), streaming (Phase 8), multi-agent critic (Phase 9), and a licensed live product feed.

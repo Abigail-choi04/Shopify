@@ -56,6 +56,7 @@ import json
 from langgraph.graph import END, StateGraph
 from pydantic import ValidationError
 
+from app.agent.demo import tamper_one_claim
 from app.agent.ranking import (
     CATEGORY_ICONS,
     SEARCH_WORDS,
@@ -72,6 +73,7 @@ from app.normalizers.spec_facts import COMPARISON_SPECS
 from app.schemas.agent import (
     ChatResponse,
     Claim,
+    DemoTamperOut,
     DroppedClaim,
     ExplainOutput,
     ParsedIntentOut,
@@ -666,7 +668,23 @@ async def explain_node(state: AgentState) -> dict:
             )
         )
 
-    return {"proposed_claims": proposed, "trace": trace, "call_counter": counter}
+    extra: dict = {}
+    if state.get("demo_tamper") and retry_count == 0 and proposed:
+        # Demo mode: make ONE claim wrong on purpose so the shopper can watch the checker catch it.
+        proposed, tamper_info = tamper_one_claim(proposed, ranked)
+        if tamper_info:
+            trace.append(
+                TraceStep(
+                    type="observation",
+                    text=(
+                        f"DEMO MODE: one drafted claim was deliberately changed from “{tamper_info['originalText']}” "
+                        f"to “{tamper_info['alteredText']}” to show the checker working."
+                    ),
+                )
+            )
+            extra["demo_tamper_info"] = tamper_info
+
+    return {"proposed_claims": proposed, "trace": trace, "call_counter": counter, **extra}
 
 
 async def verify_node(state: AgentState) -> dict:
@@ -706,6 +724,16 @@ async def verify_node(state: AgentState) -> dict:
 
     verified_count = checked - len(failures)
 
+    # Demo mode: note the checker's verdict on the claim that was deliberately made wrong.
+    demo_update: dict = {}
+    demo_info = state.get("demo_tamper_info")
+    if demo_info and "verdict" not in demo_info:
+        for pid, claim, reason in failures:
+            if pid == demo_info["productId"] and claim.text == demo_info["alteredText"]:
+                demo_update["demo_tamper_info"] = {**demo_info, "verdict": reason}
+                trace.append(TraceStep(type="observation", text=f"The checker rejected the altered claim: {reason}."))
+                break
+
     # Some claims failed and the model hasn't had its rewrite yet -> go back to explain.
     if failures and retry_count < MAX_EXPLAIN_RETRIES:
         problems = "\n".join(f'- product {pid}: "{claim.text}" -> {reason}' for pid, claim, reason in failures)
@@ -726,6 +754,7 @@ async def verify_node(state: AgentState) -> dict:
             "retry_count": retry_count + 1,
             "verify_feedback": feedback,
             "verification_done": False,
+            **demo_update,
         }
 
     # Final decision: keep the verified claims, drop the rest, and say so.
@@ -765,6 +794,7 @@ async def verify_node(state: AgentState) -> dict:
         "claims_checked": checked,
         "claims_verified": verified_count,
         "verification_done": True,
+        **demo_update,
     }
 
 
@@ -834,6 +864,19 @@ async def respond_node(state: AgentState) -> dict:
             break
 
     dropped = state.get("dropped_claims", [])
+    demo_info = state.get("demo_tamper_info")
+    demo_tamper = (
+        DemoTamperOut(
+            productTitle=demo_info["productTitle"],
+            originalText=demo_info["originalText"],
+            alteredText=demo_info["alteredText"],
+            caught="verdict" in demo_info,
+            verdict=demo_info.get("verdict"),
+            rewritten=state.get("retry_count", 0) > 0,
+        )
+        if demo_info
+        else None
+    )
     response = ChatResponse(
         aisle=parsed_intent.category_label,
         parsedIntent=ParsedIntentOut(
@@ -852,6 +895,7 @@ async def respond_node(state: AgentState) -> dict:
             dropped=dropped,
         ),
         dataSource=state.get("data_source_note"),
+        demoTamper=demo_tamper,
         relaxations=[
             RelaxationOut(
                 kind=r.kind,
@@ -896,8 +940,9 @@ def build_agent_graph():
 _compiled_graph = None
 
 
-async def run_agent(query: str, allow_clarification: bool = True) -> ChatResponse:
-    """Entry point called by the /chat router. allow_clarification=False when the query already answers a question."""
+async def run_agent(query: str, allow_clarification: bool = True, demo_tamper: bool = False) -> ChatResponse:
+    """Entry point called by the /chat router. allow_clarification=False when the query already answers a question.
+    demo_tamper=True deliberately corrupts one claim in the first draft so the checker can be seen working."""
     global _compiled_graph
     if _compiled_graph is None:
         _compiled_graph = build_agent_graph()
@@ -910,6 +955,7 @@ async def run_agent(query: str, allow_clarification: bool = True) -> ChatRespons
         "replan_count": 0,
         "relaxations": [],
         "allow_clarification": allow_clarification,
+        "demo_tamper": demo_tamper,
     }
     final_state = await _compiled_graph.ainvoke(initial_state)
     return final_state["final_response"]

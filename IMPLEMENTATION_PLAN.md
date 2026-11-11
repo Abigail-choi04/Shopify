@@ -1,21 +1,101 @@
-# ShopMate AI — Detailed Implementation Plan
+# ShopMate AI — Implementation Status and Plan
 
-This is the complete, phase-by-phase build plan: what gets built, with
-which exact tools, in what order, how to verify each phase works, and
-what's still a decision point. Read alongside `ARCHITECTURE.md` (the
-*why*) and `docs/architecture-diagram.png` (the visual).
-
-**Status as of this document**: Phase 0 and Phase 1 are built and
-tested (backend scaffold + FakeStoreAPI integration). A frontend-only
-hardcoded demo (visually representing Phases 2 → 8's eventual output)
-has also been built ahead of schedule, to have something to show
-before the real pipeline exists — this is explicitly a prototype, not
-a phase in its own right, and gets replaced piece by piece as Phases
-2–8 are implemented for real.
+Part 1 says what is built, how it was checked, and what remains. Part 2 keeps the original detailed phase specifications (written before the backend existed) for reference.
 
 ---
 
-## 1. Full Tech Stack (reference table)
+## 1. Status by phase
+
+| Phase | What | Status | How it is checked |
+|---|---|---|---|
+| 0 | Scaffolding: FastAPI, React + Vite, Supabase | Done | `/health`, `/health/db` |
+| 1 | Shared `Product` schema, FakeStoreAPI client and normalizer | Done | `tests/test_phase4_data.py` |
+| 2–3 | Groq planning and the LangGraph agent loop (planner, search, rank, explain, verify, respond) | Done | `tests/test_phase4_agent.py`, `tests/test_phase4_flow.py` |
+| 4 | Real data: Flipkart snapshot (480 listings, 5 categories), typed spec facts, five-outcome requirement matching, review-weighted ranking with model grouping, SerpAPI fallback, rupee prices | Done | `tests/test_phase4_*.py`, `tests/test_currency.py`, offline evaluation |
+| 5 | Grounding: claims with sources and a deterministic verifier (one rewrite, then drop) | Done | `tests/test_phase5.py`, fault-injection test |
+| 6 | Session memory (follow-up questions) | Not built | — |
+| 7 | Mock cart mandate: server drafts, consent, HMAC signature, price re-check, audit log, approval screen | Done | `tests/test_phase7_mandates.py` (18 tests) |
+| 8 | Streaming and frontend polish | Not built | — |
+| 9 | Multi-agent critic (stretch) | Not built | — |
+| Extra | Replanning (loosen one requirement, never a named brand) and clarifying questions | Done | `tests/test_replan_clarify.py`, `tests/test_replan_offline.py`, evaluation |
+| Extra | Evaluation: 66 gold-intent queries, offline and live scripts, replanning stress set, LLM-only baseline | Done | `tests/test_evaluation.py` |
+
+The frontend calls the real `/chat` and `/mandates` endpoints. There is no scripted demo data any more.
+
+---
+
+## 2. Evaluation results so far
+
+Offline (no model, repeatable):
+- **Verifier fault injection:** 12,121 of 12,132 deliberately corrupted claims were rejected (99.9%); 0 of 7,321 true claims were rejected. The 11 misses are wrong numbers that happen to equal always-allowed numbers (3 or 5).
+- **Extraction check:** extracted RAM agrees with the listing title for 97 of 97 phones and 98 of 98 laptops.
+- **Retrieval on 66 queries:** 61 in scope, 55 answerable, 6 empty (5 because the requirement contradicts every listing in budget, 1 because nothing is in budget).
+- **Replanning (offline, fixed rule's pick):** of the 6 empty core queries, 5 were rescued in one step; on the 21-query stress set 5 of 7 were rescued.
+
+Live (Groq `openai/gpt-oss-120b`, all 66 queries, 99 runs):
+- Category and budget parsed correctly in every run; must-have recall 82.2%, precision 92.4%, exact intent 71.7% (strict; most misses are paraphrases).
+- 0 of 1,350 first-draft claims failed the verifier; no rewrites, drops or data-only fallbacks.
+- Median latency 20.8 s, p90 26.0 s.
+- LLM-only baseline: 6 of 180 recommended products match a current listing (3.3%).
+
+Not done: the live replanning stress set (`--set replan`) and a human check of requirement matching (dropped; stated as a limitation in the paper).
+
+---
+
+## 3. What remains
+
+Required for submission:
+1. Paper: describe replanning and clarifying questions; update the live-results section; remove the human-check claim; get the advisor's answer on the data-sharing statement; check every reference against its original; compile in Overleaf with the real IEEE class.
+2. Run `python -m evaluation.live_eval --set replan` (21 queries, uses tokens) if the replanning section should include the model's own choices.
+3. Demo rehearsal: full flow including a replanning example, a clarifying question and the mandate.
+
+Optional, in order of value:
+1. Session memory (Phase 6): follow-ups like "cheaper ones" or "same but 16GB RAM".
+2. Streaming of the reasoning trace (Phase 8).
+3. A second, independent critic agent (Phase 9), or an LLM-as-judge comparison with the deterministic verifier.
+4. A licensed, live product feed instead of the snapshot.
+
+---
+
+## 4. Decisions made (and why)
+
+- **Snapshot instead of live scraping:** repeatable evaluation, no quota risk on demo day, no scraping at demo time. Cost: data is one moment from one retailer and cannot be published.
+- **Model never decides facts:** listing facts are extracted by code; the verifier is plain Python; replanning options are computed from the catalog and the model only chooses among them.
+- **Only "not met" removes a product:** silence is reported as "couldn't confirm", never as failure.
+- **Brand and category are never relaxed by replanning.**
+- **Groq `openai/gpt-oss-120b`:** fast, OpenAI-compatible, free tier (200,000 tokens/day, so live evaluation is resumable).
+- **Mock mandate only:** the pattern (consent, signature, re-check, audit) is the contribution; no payment processor is planned.
+- **Human labelling check dropped:** the offline checks, the fault-injection test and the extraction check against titles stand in; the paper states that requirement matching was not validated by human reviewers.
+
+---
+
+## 5. Project layout
+
+```
+backend/
+  app/agent/        graph.py (agent), replan.py, requirements.py, ranking.py, tools.py, verifier.py, state.py
+  app/normalizers/  flipkart.py, fakestore.py, spec_facts.py
+  app/routers/      chat.py, mandates.py, products.py
+  app/services/     groq_client.py, snapshot_store.py, serpapi_client.py, currency.py, mandates.py, mandate_db.py
+  app/schemas/      product.py, intent.py, agent.py, mandate.py
+  evaluation/       queries.json, queries_replan.json, offline_eval.py, live_eval.py, results/
+  tests/            automated tests (no internet or keys)
+  data_private/     the Flipkart snapshot and per-product evaluation files (git-ignored)
+frontend/src/       App.jsx, api.js, components/ (ReasoningTrace, ProductRecommendations, CartMandateModal)
+```
+
+---
+
+# Part 2 — Original phase specifications (historical reference)
+
+These are the original step-by-step specs. Where they disagree with Part 1, **Part 1 is correct**. Known differences:
+- Phase 2 (intent parsing) was folded into the planner node of Phase 3; there is no standalone `/parse-intent` endpoint.
+- The "frontend demo prototype" with hardcoded scenarios was replaced by the real `/chat` and `/mandates` calls.
+- Phase 4 changed: MYSTORE was dropped and RapidAPI is not used; real data is a one-time Apify Flipkart snapshot (480 listings), with an optional SerpAPI fallback.
+- Phase 5 grounding was built as claims plus a deterministic Python verifier (not a second model call).
+- Phases 6, 8 and 9 are still unbuilt.
+
+### Spec 1. Full Tech Stack (reference table)
 
 | Layer | Technology | Version (pin) | Role |
 |---|---|---|---|
@@ -43,7 +123,7 @@ a phase in its own right, and gets replaced piece by piece as Phases
 
 ---
 
-## 2. Prerequisites & Accounts Needed
+### Spec 2. Prerequisites & Accounts Needed
 
 Before starting Phase 2 onward, these accounts/keys are required:
 
@@ -63,7 +143,7 @@ demo.
 
 ---
 
-## 3. Phase 0 — Scaffolding ✅ Done
+### Spec 3. Phase 0 — Scaffolding ✅ Done
 
 **Goal**: prove frontend, backend, and database can all talk to each
 other, with zero agent logic.
@@ -84,7 +164,7 @@ statuses showed "ok".
 
 ---
 
-## 4. Phase 1 — Data Layer (fallback-first) ✅ Done
+### Spec 4. Phase 1 — Data Layer (fallback-first) ✅ Done
 
 **Goal**: integrate FakeStoreAPI as the always-on product backbone,
 normalized into a category-agnostic schema.
@@ -111,7 +191,7 @@ adds new files without touching Phase 1's code.
 
 ---
 
-## 5. Frontend Demo Prototype (built ahead of schedule)
+### Spec 5. Frontend Demo Prototype (built ahead of schedule)
 
 **Goal**: something demoable before the real agent pipeline exists —
 a scripted walk-through of the intended user experience, useful for
@@ -151,7 +231,7 @@ working system, if asked directly.
 
 ---
 
-## 6. Phase 2 — Basic LLM Wiring (next phase to build)
+### Spec 6. Phase 2 — Basic LLM Wiring (next phase to build)
 
 **Goal**: replace the keyword-matching in `scenarios.js` with a real,
 single-shot Groq call that parses a natural-language query into
@@ -222,7 +302,7 @@ OpenAI-compatible).
 
 ---
 
-## 7. Phase 3 — Agent Orchestration (LangGraph)
+### Spec 7. Phase 3 — Agent Orchestration (LangGraph)
 
 **Goal**: the actual agent. A graph with explicit nodes: Planner →
 Search/tool-use → Comparison/Ranking → Response. (Verifier node is
@@ -294,7 +374,7 @@ Phase 5, added once this skeleton works.)
 
 ---
 
-## 8. Phase 4 — Real Data Sources
+### Spec 8. Phase 4 — Real Data Sources
 
 **Goal**: layer RapidAPI/MYSTORE on top of the FakeStoreAPI fallback,
 with graceful degradation.
@@ -329,7 +409,7 @@ with graceful degradation.
 
 ---
 
-## 9. Phase 5 — Transparent Reasoning
+### Spec 9. Phase 5 — Transparent Reasoning
 
 **Goal**: implement the grounding + verifier mechanisms described in
 the project doc, not just display a trace (which the frontend
@@ -364,7 +444,7 @@ presence.
 
 ---
 
-## 10. Phase 6 — Session Memory (V2)
+### Spec 10. Phase 6 — Session Memory (V2)
 
 **Goal**: persist budget/preferences/rejected items across turns in
 Supabase.
@@ -395,7 +475,7 @@ Supabase.
 
 ---
 
-## 11. Phase 7 — Mock Cart Mandate
+### Spec 11. Phase 7 — Mock Cart Mandate
 
 **Goal**: wire the real backend to the mandate flow the frontend
 prototype already visualizes.
@@ -425,7 +505,7 @@ order row appears in Supabase after confirmation.
 
 ---
 
-## 12. Phase 8 — Frontend Polish
+### Spec 12. Phase 8 — Frontend Polish
 
 **Goal**: streaming responses, expandable reasoning trace, demo
 rehearsal on the 2–3 chosen categories.
@@ -454,7 +534,7 @@ audience (a few seconds per step, not tens of seconds).
 
 ---
 
-## 13. Phase 9 (Stretch) — Multi-Agent Critic
+### Spec 13. Phase 9 (Stretch) — Multi-Agent Critic
 
 **Goal**: a genuinely separate critic agent (different prompt, and
 ideally evaluated against the primary chain rather than sharing its
@@ -467,7 +547,7 @@ Phase 0–8.
 
 ---
 
-## 14. Testing Philosophy Throughout
+### Spec 14. Testing Philosophy Throughout
 
 - Every phase above lists a **manual verification step** — do this
   before moving to the next phase, not at the end.
@@ -483,7 +563,7 @@ Phase 0–8.
 
 ---
 
-## 15. What Still Needs a Decision
+### Spec 15. What Still Needs a Decision
 
 These are flagged rather than assumed, per your instruction to ask
 rather than guess:

@@ -46,3 +46,7 @@ class AgentState(TypedDict, total=False):
 
     # --- Clarifying questions ---
     allow_clarification: bool  # False when the query already answers an earlier question
+
+    # --- Verifier demo ("inject an error") ---
+    demo_tamper: bool  # True when the shopper asked to see the checker catch a deliberately wrong claim
+    demo_tamper_info: dict  # which claim was altered, and (once checked) the checker's verdict
